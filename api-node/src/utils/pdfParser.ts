@@ -33,6 +33,32 @@ export interface ParseResult {
 }
 
 function parseMarks(str: string): { internal: number | null; external: number | null; total: number } {
+  const trimmed = str.trim().replace(/\s+/g, ' ');
+  if (trimmed.includes(' ')) {
+    const parts = trimmed.split(' ');
+    const parseVal = (val: string) => {
+      const cleaned = val.replace(/[A-Za-z]/g, '0');
+      if (cleaned === '-') return null;
+      const num = Number(cleaned);
+      return isNaN(num) ? 0 : num;
+    };
+
+    if (parts.length === 3) {
+      const p1 = parseVal(parts[0]);
+      const p2 = parseVal(parts[1]);
+      const p3 = parseVal(parts[2]) ?? 0;
+      return { internal: p1, external: p2, total: p3 };
+    }
+    if (parts.length === 2) {
+      const p1 = parseVal(parts[0]);
+      const p2 = parseVal(parts[1]) ?? 0;
+      return { internal: p1, external: null, total: p2 };
+    }
+    if (parts.length === 1) {
+      return { internal: 0, external: 0, total: parseVal(parts[0]) ?? 0 };
+    }
+  }
+
   const cleanStr = str.replace(/[A-Za-z]/g, '0');
 
   if (cleanStr.startsWith('-')) {
@@ -171,85 +197,135 @@ export async function parseResultPdf(buffer: Buffer): Promise<ParseResult> {
   }
 
   const subjects: ParsedSubject[] = [];
-  const marksDatesRegex = /^([\d\-A-Za-z]+)(\d{2},\d{4})(\d{4}-\d{2}-\d{2})$/;
+
+  const subjectStartRegex = /^([1-8])\s+([A-Za-z0-9\-]+)\s*(.*)$/;
+  const marksDatesRegex = /((?:[0-9\-]+|A|AB|ABS|absent)(?:\s+(?:[0-9\-]+|A|AB|ABS|absent)){0,2})\s+(\d{1,2},\d{4})\s+(\d{4}-\d{2}-\d{2})\s*$/i;
+
+  let currentSubject: {
+    semester: number;
+    paper_code: string;
+    nameParts: string[];
+  } | null = null;
 
   let i = 0;
-  while (i < lines.length && !lines[i].includes('PAPER CODESUBJECT NAME')) {
+  while (i < lines.length && 
+         !lines[i].includes('INTERNAL MARKS') && 
+         !lines[i].includes('SEMESTER/ANNUAL') && 
+         !lines[i].includes('PAPER CODE') && 
+         !lines[i].includes('SEM/')) {
     i++;
   }
-  if (i < lines.length) {
-    i++;
-  } else {
+  if (i >= lines.length) {
     i = 0;
   }
 
-  while (i < lines.length) {
+  for (; i < lines.length; i++) {
     const line = lines[i];
-    const semMatch = /^[1-8]$/.test(line);
-    if (semMatch) {
-      const semester = parseInt(line, 10);
-      if (i + 1 < lines.length) {
-        const paper_code = lines[i + 1];
-        const nameLines: string[] = [];
-        let j = i + 2;
-        let foundMarks = false;
-        let marksLine = '';
-        
-        while (j < lines.length && j < i + 10) {
-          const candidate = lines[j];
-          if (marksDatesRegex.test(candidate)) {
-            foundMarks = true;
-            marksLine = candidate;
-            break;
-          } else {
-            nameLines.push(candidate);
-          }
-          j++;
-        }
-
-        if (foundMarks) {
-          const match = marksLine.match(marksDatesRegex);
-          if (match) {
-            const rawMarks = match[1];
-            const exam_date = match[2];
-            const declared_date = match[3];
-            
-            const { internal, external, total } = parseMarks(rawMarks);
-            const subject_name = nameLines.join(' ').replace(/\s+/g, ' ');
-            
-            const isLab = getDefaultCredits(subject_name) === 1;
-            const subData = {
-              internal_theory: isLab ? 0 : (internal ?? 0),
-              external_theory: isLab ? 0 : (external ?? 0),
-              internal_practical: isLab ? (internal ?? 0) : 0,
-              external_practical: isLab ? (external ?? 0) : 0,
-            };
-            
-            const calc = GradeCalculator.calculateSubjectResult({
-              ...subData,
-            });
-            
-            subjects.push({
-              semester,
-              paper_code,
-              subject_name,
-              ...subData,
-              total_marks: calc.total_marks,
-              max_marks: calc.max_marks,
-              percentage: calc.percentage,
-              grade: calc.grade,
-              grade_point: calc.grade_point,
-              credits: getDefaultCredits(subject_name),
-              exam_date,
-              declared_date,
-            });
-            
-            i = j;
-          }
+    const startMatch = line.match(subjectStartRegex);
+    
+    if (startMatch) {
+      const semester = parseInt(startMatch[1], 10);
+      const paper_code = startMatch[2];
+      const remainder = startMatch[3] ? startMatch[3].trim() : '';
+      
+      currentSubject = {
+        semester,
+        paper_code,
+        nameParts: remainder ? [remainder] : []
+      };
+      
+      if (remainder) {
+        const marksMatch = remainder.match(marksDatesRegex);
+        if (marksMatch) {
+          const matchIndex = marksMatch.index ?? 0;
+          const prefix = remainder.substring(0, matchIndex).trim();
+          currentSubject.nameParts = prefix ? [prefix] : [];
+          
+          const rawMarks = marksMatch[1];
+          const exam_date = marksMatch[2];
+          const declared_date = marksMatch[3];
+          
+          const { internal, external, total } = parseMarks(rawMarks);
+          const subject_name = currentSubject.nameParts.join(' ').replace(/\s+/g, ' ').trim();
+          
+          const isLab = getDefaultCredits(subject_name) === 1;
+          const subData = {
+            internal_theory: isLab ? 0 : (internal ?? 0),
+            external_theory: isLab ? 0 : (external ?? 0),
+            internal_practical: isLab ? (internal ?? 0) : 0,
+            external_practical: isLab ? (external ?? 0) : 0,
+          };
+          
+          const calc = GradeCalculator.calculateSubjectResult({
+            ...subData,
+          });
+          
+          subjects.push({
+            semester: currentSubject.semester,
+            paper_code: currentSubject.paper_code,
+            subject_name,
+            ...subData,
+            total_marks: calc.total_marks,
+            max_marks: calc.max_marks,
+            percentage: calc.percentage,
+            grade: calc.grade,
+            grade_point: calc.grade_point,
+            credits: getDefaultCredits(subject_name),
+            exam_date,
+            declared_date,
+          });
+          
+          currentSubject = null;
         }
       }
+    } else if (currentSubject) {
+      const marksMatch = line.match(marksDatesRegex);
+      if (marksMatch) {
+        const matchIndex = marksMatch.index ?? 0;
+        const prefix = line.substring(0, matchIndex).trim();
+        if (prefix) {
+          currentSubject.nameParts.push(prefix);
+        }
+        
+        const rawMarks = marksMatch[1];
+        const exam_date = marksMatch[2];
+        const declared_date = marksMatch[3];
+        
+        const { internal, external, total } = parseMarks(rawMarks);
+        const subject_name = currentSubject.nameParts.join(' ').replace(/\s+/g, ' ').trim();
+        
+        const isLab = getDefaultCredits(subject_name) === 1;
+        const subData = {
+          internal_theory: isLab ? 0 : (internal ?? 0),
+          external_theory: isLab ? 0 : (external ?? 0),
+          internal_practical: isLab ? (internal ?? 0) : 0,
+          external_practical: isLab ? (external ?? 0) : 0,
+        };
+        
+        const calc = GradeCalculator.calculateSubjectResult({
+          ...subData,
+        });
+        
+        subjects.push({
+          semester: currentSubject.semester,
+          paper_code: currentSubject.paper_code,
+          subject_name,
+          ...subData,
+          total_marks: calc.total_marks,
+          max_marks: calc.max_marks,
+          percentage: calc.percentage,
+          grade: calc.grade,
+          grade_point: calc.grade_point,
+          credits: getDefaultCredits(subject_name),
+          exam_date,
+          declared_date,
+        });
+        
+        currentSubject = null;
+      } else {
+        currentSubject.nameParts.push(line);
+      }
     }
-    i++;
   }
 
   return {

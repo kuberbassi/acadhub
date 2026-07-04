@@ -313,7 +313,7 @@ const NoteToolbar: React.FC<NoteToolbarProps> = ({
                     </button>
 
                     {showAiMenu && !loadingAi && (
-                        <div className="absolute right-0 bottom-full mb-2 z-50 w-64 bg-surface border border-outline rounded-xl shadow-lg p-2.5 flex flex-col gap-2.5 animate-fadeIn">
+                        <div className="fixed bottom-16 left-4 right-4 md:absolute md:bottom-full md:right-0 md:left-auto md:w-64 md:mb-2 z-50 bg-surface border border-outline rounded-xl shadow-lg p-2.5 flex flex-col gap-2.5 animate-fadeIn">
                             <div className="flex flex-col gap-0.5">
                                 <button
                                     type="button"

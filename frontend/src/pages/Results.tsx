@@ -710,9 +710,9 @@ const Results: React.FC = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="w-full max-w-sm rounded-xl border border-outline bg-surface border border-outline p-8"
+                        className="w-full max-w-sm rounded-xl border border-outline bg-surface p-6 md:p-8 flex flex-col max-h-[90vh]"
                     >
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center justify-between mb-6 shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                                     <Download size={14} className="text-emerald-600 dark:text-emerald-400" />
@@ -724,34 +724,36 @@ const Results: React.FC = () => {
                             </button>
                         </div>
 
-                        <p className="text-xs text-on-surface-variant/60 mb-4">Select which results to include in the PDF:</p>
+                        <div className="overflow-y-auto pr-1 flex-1 min-h-0 mb-6 flex flex-col">
+                            <p className="text-xs text-on-surface-variant/60 mb-4">Select which results to include in the PDF:</p>
 
-                        <div className="flex flex-col gap-2 mb-6">
-                            {[{ label: 'All Semesters (Full Transcript)', val: 'overall' },
-                              ...(results?.semesters || []).map((s: any) => {
-                                  const num = s.semester_num ?? s.semester;
-                                  return {
-                                      label: s.semester_label || (num ? `Semester ${num}` : 'Semester'),
-                                      val: String(num),
-                                  };
-                              })
-                            ].map(opt => (
-                                <button
-                                    key={opt.val}
-                                    onClick={() => setPdfSem(opt.val)}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-xs font-bold text-left transition-all ${
-                                        pdfSem === opt.val
-                                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                            : 'border-outline bg-surface text-on-surface-variant hover:bg-surface-container'
-                                    }`}
-                                >
-                                    <span className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${pdfSem === opt.val ? 'border-emerald-400 bg-emerald-400' : 'border-outline'}`} />
-                                    {opt.label}
-                                </button>
-                            ))}
+                            <div className="flex flex-col gap-2">
+                                {[{ label: 'All Semesters (Full Transcript)', val: 'overall' },
+                                  ...(results?.semesters || []).map((s: any) => {
+                                      const num = s.semester_num ?? s.semester;
+                                      return {
+                                          label: s.semester_label || (num ? `Semester ${num}` : 'Semester'),
+                                          val: String(num),
+                                      };
+                                  })
+                                ].map(opt => (
+                                    <button
+                                        key={opt.val}
+                                        onClick={() => setPdfSem(opt.val)}
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-xs font-bold text-left transition-all ${
+                                            pdfSem === opt.val
+                                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                : 'border-outline bg-surface text-on-surface-variant hover:bg-surface-container'
+                                        }`}
+                                    >
+                                        <span className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${pdfSem === opt.val ? 'border-emerald-400 bg-emerald-400' : 'border-outline'}`} />
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 shrink-0">
                             <button
                                 onClick={() => setShowPdfModal(false)}
                                 className="flex-1 py-3 rounded-lg border border-outline bg-surface text-xs font-bold text-on-surface-variant hover:bg-surface-container transition-all"
