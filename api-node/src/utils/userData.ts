@@ -94,6 +94,26 @@ export async function createInBatches<T>(items: T[], worker: (item: T) => Promis
 export async function restoreUserData(userId: string, rawData: UserData) {
   await clearUserData(userId)
 
+  // Safely restore user profile settings from the backup, protecting the account's identity.
+  if (rawData.user_profile) {
+    const profile = getSafeProfileUpdate(rawData.user_profile)
+    // CRITICAL: Protect the destination user's identity from being overwritten!
+    delete profile.email
+    delete profile.id
+    delete profile.google_id
+    
+    const cleanProfile = Object.fromEntries(
+      Object.entries(profile).filter(([_, v]) => v !== undefined && v !== null)
+    )
+
+    if (Object.keys(cleanProfile).length > 0) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: cleanProfile,
+      }).catch(err => console.error('[restoreUserData] Profile update failed:', err))
+    }
+  }
+
   const idMap = new Map<string, string>()
 
   if (rawData.subjects?.length) {
@@ -105,16 +125,20 @@ export async function restoreUserData(userId: string, rawData: UserData) {
         id: newId,
         user_id: userId,
         name: String(s.name ?? ''),
-        code: s.code ? String(s.code) : null,
-        professor: s.professor ? String(s.professor) : null,
+        code: s.code ? String(s.code) : '',
+        professor: s.professor ? String(s.professor) : '',
+        classroom: s.classroom ? String(s.classroom) : '',
         target: Number(normalizeValue(s.target ?? s.target_attendance) ?? 75),
         attended: Number(normalizeValue(s.attended) ?? 0),
         total: Number(normalizeValue(s.total) ?? 0),
         semester: Number(normalizeValue(s.semester) ?? 1),
+        type: s.type ? String(s.type) : 'theory',
         categories: Array.isArray(s.categories) ? s.categories : ['Theory'],
         practicals: s.practicals ?? null,
         assignments: s.assignments ?? null,
         credits: s.credits !== undefined ? Number(s.credits) : 3,
+        syllabus: s.syllabus ? String(s.syllabus) : null,
+        created_at: s.created_at ? new Date(normalizeValue(s.created_at)) : new Date(),
         updated_at: s.updated_at ? new Date(normalizeValue(s.updated_at)) : new Date(),
       }
     })
@@ -122,22 +146,38 @@ export async function restoreUserData(userId: string, rawData: UserData) {
   }
 
   if (rawData.attendance_logs?.length) {
-    const logsData = (rawData.attendance_logs as any[]).map((log) => {
+    const seenLogs = new Set<string>()
+    const logsData: any[] = []
+    
+    for (const log of rawData.attendance_logs as any[]) {
       const sRef = String(normalizeValue(log.subject_id ?? log.subjectId) ?? '')
       const status = String(log.status ?? '').toLowerCase()
       const type = String(log.type ?? '').toLowerCase()
-      return {
+      const subId = sRef && idMap.has(sRef) ? idMap.get(sRef)! : sRef
+      
+      const normalizedStatus = normalizeAttendanceStatus(status)
+      const normalizedType = ['original', 'substitution', 'extra'].includes(type) ? type : 'original'
+      const dateStr = String(log.date ?? '').substring(0, 10)
+      
+      const uniqueKey = `${userId}-${subId}-${dateStr}-${normalizedType}`
+      if (seenLogs.has(uniqueKey)) {
+        console.warn(`[restoreUserData] Skipping duplicate attendance log: ${uniqueKey}`)
+        continue
+      }
+      seenLogs.add(uniqueKey)
+      
+      logsData.push({
         id: randomUUID(),
         user_id: userId,
-        subject_id: sRef && idMap.has(sRef) ? idMap.get(sRef)! : sRef,
+        subject_id: subId,
         subject_name: String(log.subject_name ?? ''),
-        date: String(log.date ?? '').substring(0, 10),
-        status: normalizeAttendanceStatus(status),
-        type: ['original', 'substitution', 'extra'].includes(type) ? type : 'original',
+        date: dateStr,
+        status: normalizedStatus,
+        type: normalizedType,
         notes: log.notes ? String(log.notes) : null,
         timestamp: log.timestamp ? new Date(normalizeValue(log.timestamp)) : new Date(),
-      }
-    })
+      })
+    }
     await createInBatches(logsData as any[], (row) => prisma.attendanceLog.create({ data: row as any }))
   }
 

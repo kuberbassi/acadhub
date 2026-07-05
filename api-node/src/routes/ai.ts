@@ -39,8 +39,10 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
         prisma.systemLog.findMany({ where: { user_id: userId }, orderBy: { timestamp: 'desc' }, take: 10 })
     ])
 
-    let resolvedTimetable = null
-    if (allTimetables.length > 0) {
+    const activeSem = selectedSemester || user?.current_semester || 1
+    let resolvedTimetable = allTimetables.find(t => t.semester === activeSem)
+    
+    if (!resolvedTimetable && allTimetables.length > 0) {
         let best = allTimetables[0]
         let bestScore = 0
         for (const t of allTimetables) {
@@ -253,9 +255,17 @@ async function chatHandler(req: AuthRequest, res: any) {
         const body = ChatSchema.parse(req.body)
         const { message, history = [], selectedSemester } = body
 
+        // Detect if user is asking about a specific semester in their message
+        let finalSemester = selectedSemester
+        const semRegex = /(?:sem|semester)\s*([1-8])/i
+        const match = message.match(semRegex)
+        if (match) {
+            finalSemester = parseInt(match[1], 10)
+        }
+
         let context = ''
         try {
-            context = await buildFullContext(req, selectedSemester)
+            context = await buildFullContext(req, finalSemester)
         } catch (contextErr) {
             console.error('[ai/chat] context build failed:', contextErr)
             context = 'Profile sync temporarily unavailable.'

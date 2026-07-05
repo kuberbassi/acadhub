@@ -173,7 +173,7 @@ const SettingsDataSection: React.FC<SettingsDataSectionProps> = ({ onLogout, onD
         const data = JSON.parse(text);
         const isConfirmed = await confirm({
             title: 'Import Backup Configuration',
-            message: '⚠️ WARNING: Importing this backup will automatically WIPE all your current attendance, subjects, and results, replacing them with the backup data. A safety rollback backup will be created automatically. Do you want to proceed?',
+            message: '⚠️ WARNING: Importing this backup will automatically WIPE all your current subjects, attendance logs, timetables, and courses, replacing them with the backup data. Do you want to proceed?',
         });
         if (!isConfirmed) return;
 

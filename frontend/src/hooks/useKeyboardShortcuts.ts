@@ -34,7 +34,7 @@ export const useKeyboardShortcuts = () => {
     // Help shortcut: '?' (Shift + /)
     if (event.key === '?') {
       event.preventDefault();
-      showToast('info', '⌨️ Keyboard Shortcuts:\n• g + d: Dashboard\n• g + t: Timetable\n• g + c: Calendar\n• g + p: Practicals\n• g + s: Settings\n• g + k: Courses');
+      showToast('info', '⌨️ Navigation Shortcuts\n───────────────────\n•  g  ➔  d  :  Dashboard\n•  g  ➔  t  :  Timetable\n•  g  ➔  c  :  Calendar\n•  g  ➔  p  :  Practicals\n•  g  ➔  s  :  Settings\n•  g  ➔  k  :  Courses');
       return;
     }
 

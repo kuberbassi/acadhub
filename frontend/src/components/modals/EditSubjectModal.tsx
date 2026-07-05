@@ -79,17 +79,6 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
         }
     };
 
-    // Automatic smart credits assigner
-    useEffect(() => {
-        const current = (formData as any).categories || [];
-        if (current.includes('Theory') && !current.includes('Practical')) {
-            setFormData(prev => ({ ...prev, credits: 3 }));
-        } else if (current.includes('Practical') && !current.includes('Theory')) {
-            setFormData(prev => ({ ...prev, credits: 1 }));
-        } else if (current.includes('Theory') && current.includes('Practical')) {
-            setFormData(prev => ({ ...prev, credits: 4 }));
-        }
-    }, [(formData as any).categories]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -156,11 +145,28 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                                     type="button"
                                     onClick={() => {
                                         const current = (formData as any).categories || [];
+                                        let nextCats;
                                         if (current.includes(cat)) {
-                                            setFormData(prev => ({ ...prev, categories: current.filter((c: string) => c !== cat) }));
+                                            nextCats = current.filter((c: string) => c !== cat);
                                         } else {
-                                            setFormData(prev => ({ ...prev, categories: [...current, cat] }));
+                                            nextCats = [...current, cat];
                                         }
+                                        
+                                        // Auto-assign credits based on category selection change action
+                                        let nextCredits = formData.credits;
+                                        if (nextCats.includes('Theory') && !nextCats.includes('Practical')) {
+                                            nextCredits = 3;
+                                        } else if (nextCats.includes('Practical') && !nextCats.includes('Theory')) {
+                                            nextCredits = 1;
+                                        } else if (nextCats.includes('Theory') && nextCats.includes('Practical')) {
+                                            nextCredits = 4;
+                                        }
+                                        
+                                        setFormData(prev => ({ 
+                                            ...prev, 
+                                            categories: nextCats, 
+                                            credits: nextCredits 
+                                        }));
                                     }}
                                     className={`px-3 py-1.5 rounded-md text-[10px] font-bold border transition-all
                                         ${((formData as any).categories || []).includes(cat)

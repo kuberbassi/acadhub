@@ -4,9 +4,11 @@
 
 # Semester — Your Academic Operating System
 
-Semester is a high-performance, full-stack Academic Operating System designed for college students. It provides real-time attendance compliance tracking, IPU portal scraper automation, target analysis, and interactive AI study assistance inside a premium dark-themed PWA container.
+Semester is a high-performance, full-stack Academic Operating System designed for college students. It provides real-time attendance compliance tracking, target analysis, and interactive AI study assistance inside a premium dark-themed PWA container.
 
-## Key Features
+---
+
+## 🚀 Key Features
 
 - 📅 **Timetable & Attendance Log**: Plan weekly slots and record classes with substitution/cancellation support.
 - 📊 **Target Compliance & Bunk Guard**: Dynamic compliance indicators showing how many classes you can bunk or must attend to stay above your target percentage.
@@ -14,34 +16,57 @@ Semester is a high-performance, full-stack Academic Operating System designed fo
 - 💾 **Google Drive Auto-Sync**: Auto-backup and sync academic data to your private Google AppData folder.
 - 🔑 **Account Migration**: Cryptographically signed migration tokens to easily transfer data to another account.
 
-## Monorepo Layout
+---
 
-- `frontend/`: React + TypeScript + Vite + Tailwind CSS Single Page Application (PWA).
-- `api-node/`: Node.js + Express + Prisma + Neon PostgreSQL Serverless API backend.
+## 📂 Project Structure
 
-## Environment Variables
+Semester is structured as a monorepo:
+- **`frontend/`**: React + TypeScript + Vite Single Page Application (PWA).
+- **`api-node/`**: Node.js + Express + Prisma + Neon PostgreSQL API backend.
+
+---
+
+## 🔑 Environment Setup
 
 ### Backend (`api-node/.env`)
 ```env
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GROQ_API_KEY=...
-GEMINI_API_KEY=...
-ALLOWED_ORIGINS=http://localhost:5173
+DATABASE_URL="postgresql://..."
+JWT_SECRET="your_jwt_secret"
+GOOGLE_CLIENT_ID="your_google_client_id"
+GOOGLE_CLIENT_SECRET="your_google_client_secret"
+GROQ_API_KEY="your_groq_api_key"
+GEMINI_API_KEY="your_gemini_api_key"
 PORT=5001
 NODE_ENV=development
 ```
 
 ### Frontend (`frontend/.env`)
 ```env
-VITE_API_URL=http://localhost:5001
-VITE_GOOGLE_CLIENT_ID=...
+VITE_API_BASE_URL="http://localhost:5001"
+VITE_GOOGLE_CLIENT_ID="your_google_client_id"
 ```
 
-## Quick Start
+---
 
-1. **Database Push**: `cd api-node && npx prisma db push`
-2. **Launch Backend**: `cd api-node && npm run dev` (Runs on port `5001`)
-3. **Launch Frontend**: `cd frontend && npm run dev` (Runs on port `5173`)
+## 🛠️ Quick Start
+
+You can run the entire workspace concurrently from the root directory:
+
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Sync Database Schema**:
+   ```bash
+   cd api-node
+   npx prisma db push
+   cd ..
+   ```
+
+3. **Start Development Servers**:
+   ```bash
+   npm run dev
+   ```
+   * Frontend will start on `http://localhost:5173`
+   * Backend API will start on `http://localhost:5001`

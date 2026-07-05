@@ -5,7 +5,7 @@
   "installCommand": "echo 'install handled by buildCommand'",
   "framework": null,
   "functions": {
-    "api-node/api/[[...path]].js": {
+    "api/[[...path]].js": {
       "maxDuration": 30,
       "memory": 1024
     }
@@ -13,7 +13,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api-node/api/[[...path]]"
+      "destination": "/api/[[...path]]"
     },
     {
       "source": "/((?!api/)(?!.*\\.).*)",
