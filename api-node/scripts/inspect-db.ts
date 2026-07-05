@@ -7,10 +7,9 @@ const adapter = new PrismaNeonHttp(process.env.DATABASE_URL!, {})
 const prisma = new PrismaClient({ adapter })
 
 const TABLES = [
-  'users', 'subjects', 'attendance_logs', 'semester_results',
-  'manual_courses', 'holidays', 'timetable', 'system_logs',
-  'user_backups', 'user_preferences', 'skills', 'projects',
-  'experiences', 'certifications'
+  'users', 'user_sessions', 'subjects', 'attendance_logs', 'semester_results',
+  'manual_courses', 'timetable', 'system_logs',
+  'user_backups', 'user_preferences', 'skills', 'notes'
 ]
 
 async function main() {

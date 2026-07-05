@@ -26,7 +26,7 @@ router.get('/data', async (req: AuthRequest, res) => {
       }
     }
 
-    const [subjects, recentLogs, resultRows] = await Promise.all([
+    const [subjects, recentLogs] = await Promise.all([
       prisma.subject.findMany({
         where: { user_id: userId, semester },
         orderBy: { name: 'asc' },
@@ -36,11 +36,8 @@ router.get('/data', async (req: AuthRequest, res) => {
         orderBy: [{ date: 'desc' }, { timestamp: 'desc' }],
         take: 30,
       }),
-      prisma.semesterResult.findMany({
-        where: { user_id: userId },
-        select: { subjects: true },
-      }),
     ])
+    const resultRows: any[] = []
     const summary = AttendanceCalculator.getAttendanceSummary(subjects, req.user?.attendance_threshold, req.user?.warning_threshold)
 
     const enriched = subjects.map((sub: any) => {
@@ -94,7 +91,7 @@ router.get('/reports_data', async (req: AuthRequest, res) => {
     }
     const userTarget = req.user?.attendance_threshold ?? 75
 
-    const [subjects, logs, resultRows] = await Promise.all([
+    const [subjects, logs] = await Promise.all([
       prisma.subject.findMany({
         where: { user_id: userId, semester },
         select: { id: true, name: true, attended: true, total: true, target: true, semester: true },
@@ -104,12 +101,8 @@ router.get('/reports_data', async (req: AuthRequest, res) => {
         select: { date: true, status: true, subject_name: true },
         orderBy: { date: 'desc' },
       }),
-      prisma.semesterResult.findMany({
-        where: { user_id: userId },
-        orderBy: { semester: 'asc' },
-        select: { semester: true, sgpa: true, subjects: true },
-      }),
     ])
+    const resultRows: any[] = []
 
     let totalAbsences = 0
     let totalAttended = 0

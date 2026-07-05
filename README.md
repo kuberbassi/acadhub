@@ -1,61 +1,47 @@
-# Zenith — Your Academic Operating System
+<p align="center">
+  <img src="frontend/public/Semester-logo.png" alt="Semester Logo" width="140" />
+</p>
 
-Zenith is a full-stack Academic Operating System featuring a React web client (PWA) and a Node + Express + Prisma backend on Neon PostgreSQL.
+# Semester — Your Academic Operating System
 
+Semester is a high-performance, full-stack Academic Operating System designed for college students. It provides real-time attendance compliance tracking, IPU portal scraper automation, target analysis, and interactive AI study assistance inside a premium dark-themed PWA container.
 
-## Current Stack
-- Frontend: React, TypeScript, Vite, Tailwind
-- Backend: Express, TypeScript, Prisma, Zod
-- Database: Neon Postgres
-- Client delivery: Installable PWA (web app)
+## Key Features
 
-## Client Support Status
-- Native app support has ended.
-- The supported client is the web app (PWA), which you can install on mobile and desktop from your browser.
-
-## Application Routes
-- **`/`**: Public SaaS Landing Page for guests, detailing Zenith features, problem matrices, and FAQ accordions. Automatically redirects authenticated sessions to `/dashboard`.
-- **`/login`**: Secure Google OAuth authentication portal.
-- **`/dashboard`**: Protected student workspace container (subject compliance logs, timetable grids, notes workspace, results, calendar, and skill tracker).
+- 📅 **Timetable & Attendance Log**: Plan weekly slots and record classes with substitution/cancellation support.
+- 📊 **Target Compliance & Bunk Guard**: Dynamic compliance indicators showing how many classes you can bunk or must attend to stay above your target percentage.
+- 🤖 **Semester Assistant**: Contextual study chat assistant powered by Groq LLM with automatic failover to Google Gemini.
+- 💾 **Google Drive Auto-Sync**: Auto-backup and sync academic data to your private Google AppData folder.
+- 🔑 **Account Migration**: Cryptographically signed migration tokens to easily transfer data to another account.
 
 ## Monorepo Layout
-- frontend: web app
-- api-node: Node API (Primary Backend) - Express + Prisma + Neon DB
-- api: Vercel serverless entry point
-- archive/legacy: archived Flask, Next.js, and React Native legacy code
-- archive/scripts: archived MongoDB-era maintenance scripts
-- archive/root-legacy-configs: archived root-level legacy mobile/Python config files
 
-## Performance & Optimization
-- **120Hz Fluid UX**: GPU-accelerated layouts (`will-change: transform`) and container optimizations (`content-visibility: auto`) keep animations lag-free.
-- **Tactile Haptics**: Integrated standard Web Vibration API (`navigator.vibrate`) to provide subtle physical touch impulses on mobile navigation, switches, and alerts.
-- **Account Migration**: Port all academic records, subjects, attendance logs, and results to a new Google login account using cryptographically signed migration tokens.
-- **Near-Instant API**: Average response time ~150ms via composite indexing and query optimization.
-- **Data Integrity**: Critical bulk writes (courses, attendance, imports) safely mapped and processed sequentially to support Neon HTTP Serverless connections.
-- **Caching**: 30s-120s caching layers for dashboard, reports, and analytics.
-- **Search Optimization**: Partial indexing on course titles and subject codes.
-- **Bulk Operations**: Optimized imports/exports with `createMany`.
+- `frontend/`: React + TypeScript + Vite + Tailwind CSS Single Page Application (PWA).
+- `api-node/`: Node.js + Express + Prisma + Neon PostgreSQL Serverless API backend.
 
 ## Environment Variables
-Create `api-node/.env` with:
 
+### Backend (`api-node/.env`)
 ```env
-DATABASE_URL=postgres://... (Neon PostgreSQL)
+DATABASE_URL=postgresql://...
 JWT_SECRET=...
 GOOGLE_CLIENT_ID=...
-ALLOWED_ORIGINS=http://localhost:3000
+GOOGLE_CLIENT_SECRET=...
+GROQ_API_KEY=...
+GEMINI_API_KEY=...
+ALLOWED_ORIGINS=http://localhost:5173
 PORT=5001
 NODE_ENV=development
 ```
 
+### Frontend (`frontend/.env`)
+```env
+VITE_API_URL=http://localhost:5001
+VITE_GOOGLE_CLIENT_ID=...
+```
+
 ## Quick Start
-1.  **Database**: Push schema with `npx prisma db push`.
-2.  **API**: `cd api-node && npm run dev`.
-3.  **Frontend**: `cd frontend && npm run dev`.
 
-## Deployment
-Deployed via Vercel with automatic serverless routing to the Node.js backend.
-
-## Repository Hygiene
-- Root contains only active app/runtime files plus repository metadata.
-- Legacy mobile and Python-era root files were moved under `archive/`.
+1. **Database Push**: `cd api-node && npx prisma db push`
+2. **Launch Backend**: `cd api-node && npm run dev` (Runs on port `5001`)
+3. **Launch Frontend**: `cd frontend && npm run dev` (Runs on port `5173`)

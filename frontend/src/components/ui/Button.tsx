@@ -61,7 +61,7 @@ const Button: React.FC<ButtonProps> = ({
             ) : (
                 <>
                     {icon && <span className="relative z-10">{icon}</span>}
-                    <span className="relative z-10">{children}</span>
+                    <span className="relative z-10 whitespace-nowrap">{children}</span>
                 </>
             )}
         </button>

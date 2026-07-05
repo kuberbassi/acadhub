@@ -1,14 +1,10 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import multer from 'multer'
 import { requireAuth, type AuthRequest } from '../middleware/auth.js'
 import { prisma } from '../config/prisma.js'
-import { GradeCalculator } from '../lib/calculations.js'
 import { ok, created, fail } from '../utils/response.js'
 import { mergePreferredRecord } from '../utils/recordMerge.js'
-import { buildResultsPayload } from '../utils/resultsPayload.js'
 import { buildViewCacheId, clearUserViewCache, readViewCache, writeViewCache } from '../utils/viewCache.js'
-import { parseResultPdf } from '../utils/pdfParser.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -252,142 +248,6 @@ router.post('/subjects/:id/attendance-count', async (req: AuthRequest, res) => {
         if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'INVALID_PARAMS'); return }
         console.error('[academic/attendance-count]', err)
         fail(res, 'Failed to update count', 'UPDATE_FAILED', 500)
-    }
-})
-
-// ─── Semester Results ────────────────────────────────────────────────────────
-
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB limit
-    },
-})
-
-router.post('/results/parse-pdf', upload.single('file'), async (req: AuthRequest, res) => {
-    try {
-        if (!req.file) {
-            fail(res, 'No file uploaded', 'MISSING_FILE', 400)
-            return
-        }
-
-        const result = await parseResultPdf(req.file.buffer)
-        ok(res, result)
-    } catch (err) {
-        console.error('[academic/results/parse-pdf POST]', err)
-        fail(res, 'Failed to parse PDF result', 'PARSE_FAILED', 500)
-    }
-})
-
-router.get('/results', async (req: AuthRequest, res) => {
-    try {
-        const userId = req.userId!
-        const results = await prisma.semesterResult.findMany({
-            where: { user_id: userId },
-            orderBy: { semester: 'asc' },
-        })
-        if (results.length) {
-            const semesters = results.map((r: any) => r.subjects as Array<Record<string, unknown>>)
-            const cgpaCalc = GradeCalculator.calculateCGPA(semesters)
-            ok(res, results.map((r: any) => ({ ...r, _id: r.id, cgpa: cgpaCalc.cgpa })))
-        } else {
-            ok(res, [])
-        }
-    } catch (err) {
-        console.error('[academic/results GET]', err)
-        fail(res, 'Failed to fetch results', 'FETCH_FAILED', 500)
-    }
-})
-
-router.get('/results/analytics', async (req: AuthRequest, res) => {
-    try {
-        const userId = req.userId!
-        const cacheId = buildViewCacheId('results_analytics', {})
-        const cached = await readViewCache<any>(userId, cacheId)
-        if (cached) { ok(res, cached, 200, 0); return }
-        const payload = await buildResultsPayload(userId)
-        ok(res, payload, 200, 0)
-        void writeViewCache(userId, cacheId, payload, 5 * 60 * 1000).catch(() => {})
-    } catch (err) {
-        console.error('[academic/results/analytics GET]', err)
-        fail(res, 'Failed to fetch analytics', 'FETCH_FAILED', 500)
-    }
-})
-
-// ─── Results Sync ────────────────────────────────────────────────────────────
-
-const SaveResultSchema = z.object({
-    semester: z.number().int().min(1).max(12),
-    subjects: z.array(z.record(z.any())).min(1),
-    student_info: z.record(z.any()).optional(),
-})
-
-router.post('/results', async (req: AuthRequest, res) => {
-    try {
-        const userId = req.userId!
-        const { semester, subjects: subjectsData, student_info: studentInfo } = SaveResultSchema.parse(req.body)
-
-        const processedSubjects = subjectsData.map(sub => {
-            const calc = GradeCalculator.calculateSubjectResult(sub)
-            return { ...sub, ...calc, name: String(sub.name || 'Unknown'), code: String(sub.code || ''), credits: parseInt(String(sub.credits ?? 0)) }
-        })
-
-        const sgpaCalc = GradeCalculator.calculateSGPA(processedSubjects)
-        const totalMarksSum = processedSubjects.reduce((a: number, s: any) => a + (parseFloat(s.total_marks) || 0), 0)
-        const maxMarksSum = processedSubjects.reduce((a: number, s: any) => a + (parseFloat(s.max_marks) || 100), 0)
-        const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, enrollment_number: true } })
-        
-        const normalizedStudentInfo = studentInfo ? {
-            name: studentInfo.name || studentInfo.student_name || '',
-            roll_no: studentInfo.enrollment_number || studentInfo.roll_no || '',
-            institution: studentInfo.institute || studentInfo.institution || '',
-            programme: studentInfo.program || studentInfo.programme || '',
-            batch: studentInfo.batch || '',
-            admission_year: studentInfo.admission_year || '',
-        } : undefined
-
-        // Wipe all existing results for this semester to ensure a clean commit and replace old entries
-        await prisma.semesterResult.deleteMany({
-            where: { user_id: userId, semester }
-        })
-
-        await prisma.semesterResult.create({
-            data: {
-                user_id: userId,
-                semester,
-                subjects: processedSubjects,
-                sgpa: sgpaCalc.sgpa,
-                total_credits: sgpaCalc.total_credits,
-                total_marks: totalMarksSum ? String(totalMarksSum) : null,
-                max_marks: maxMarksSum ? String(maxMarksSum) : null,
-                enrollment_number: normalizedStudentInfo?.roll_no || user?.enrollment_number || null,
-                student_info: (normalizedStudentInfo || null) as any,
-            },
-        })
-
-        sysLog(req, userId, 'Result Updated', `Semester ${semester} result saved. SGPA: ${sgpaCalc.sgpa}`).catch(() => { })
-        await clearUserViewCache(userId).catch(() => { })
-        ok(res, { sgpa: sgpaCalc.sgpa })
-    } catch (err) {
-        if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'INVALID_PARAMS'); return }
-        console.error('[academic/results POST]', err)
-        fail(res, 'Failed to save results', 'SAVE_FAILED', 500)
-    }
-})
-
-router.delete('/results/:semester', async (req: AuthRequest, res) => {
-    try {
-        const userId = req.userId!
-        const { semester } = SemesterParamSchema.parse(req.params)
-        const { count } = await prisma.semesterResult.deleteMany({ where: { user_id: userId, semester } })
-        if (count === 0) { fail(res, 'Result not found', 'NOT_FOUND', 404); return }
-        sysLog(req, userId, 'Result Deleted', `Deleted results for Semester ${semester}`).catch(() => { })
-        await clearUserViewCache(userId).catch(() => { })
-        ok(res, { message: `Semester ${semester} results deleted` })
-    } catch (err) {
-        if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'INVALID_PARAMS'); return }
-        console.error('[academic/results DELETE]', err)
-        fail(res, 'Failed to delete results', 'DELETE_FAILED', 500)
     }
 })
 

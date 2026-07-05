@@ -28,18 +28,15 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     const todayStr = days[new Date().getDay()]
 
-    const [user, subjects, recentLogs, allTimetables, courses, prefs, skills, resultRows, systemLogs, notes, backups] = await Promise.all([
+    const [user, subjects, recentLogs, allTimetables, courses, prefs, backups, systemLogs] = await Promise.all([
         prisma.user.findUnique({ where: { id: userId } }),
         prisma.subject.findMany({ where: { user_id: userId } }),
         prisma.attendanceLog.findMany({ where: { user_id: userId }, orderBy: { date: 'desc' }, take: 20 }),
         prisma.timetable.findMany({ where: { user_id: userId } }),
         prisma.manualCourse.findMany({ where: { user_id: userId } }),
         prisma.userPreference.findUnique({ where: { user_id: userId } }),
-        prisma.skill.findMany({ where: { user_id: userId } }),
-        prisma.semesterResult.findMany({ where: { user_id: userId }, orderBy: { semester: 'asc' } }),
-        prisma.systemLog.findMany({ where: { user_id: userId }, orderBy: { timestamp: 'desc' }, take: 10 }),
-        prisma.note.findMany({ where: { user_id: userId } }),
-        prisma.userBackup.findMany({ where: { user_id: userId }, orderBy: { created_at: 'desc' } })
+        prisma.userBackup.findMany({ where: { user_id: userId }, orderBy: { created_at: 'desc' } }),
+        prisma.systemLog.findMany({ where: { user_id: userId }, orderBy: { timestamp: 'desc' }, take: 10 })
     ])
 
     let resolvedTimetable = null
@@ -126,32 +123,8 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
             lines.push(`  - ${sub.name} (Code: ${sub.code || 'N/A'}, Semester: ${sub.semester}${isSameSem ? ' - Selected' : ''}): Current: ${pct}% (${attended}/${total}) | Target: ${target}% | Bunk Status: ${bg.status_message}${trackerInfo}`)
         }
         
-        const semesterData = resultRows.map(row => {
-            const subs = Array.isArray(row.subjects) ? row.subjects as any[] : [];
-            return subs.map(sub => {
-                if (sub.is_pending || sub.grade === '-' || sub.total_marks === null) return null;
-                totalMarks += Number(sub.total_marks ?? 0)
-                totalMaxMarks += Number(sub.max_marks ?? 100)
-                return {
-                    credits: Number(sub.credits ?? 0),
-                    grade_point: GradeCalculator.calculateSubjectResult(sub).grade_point
-                };
-            }).filter((s): s is { credits: number; grade_point: number } => s !== null);
-        });
-
-        const academicStrength = totalMaxMarks > 0 ? Math.round((totalMarks / totalMaxMarks) * 100) : 0;
-        const { cgpa } = GradeCalculator.calculateCGPA(semesterData);
         const summary = AttendanceCalculator.getAttendanceSummary(subjects, user?.attendance_threshold ?? 75, user?.warning_threshold ?? 76)
         
-        lines.push('')
-        lines.push('## Result Analytics')
-        lines.push(`Academic Strength: ${academicStrength}% (Aggregate Percentage across all declared results)`)
-        lines.push(`Calculated Overall CGPA: ${cgpa}`)
-        if (resultRows.length) {
-            const latest = resultRows[resultRows.length - 1]
-            lines.push(`Latest Result: Semester ${latest.semester} | SGPA: ${latest.sgpa} | CGPA: ${cgpa}`)
-        }
-
         lines.push('')
         lines.push('## Analytics KPIs')
         lines.push(`Overall Attendance: ${summary.total_attended}/${summary.total_classes} = ${summary.overall_percentage}%`)
@@ -166,67 +139,6 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
         lines.push('## Recent Attendance Logs (Last 20 entries)')
         for (const log of recentLogs) {
             lines.push(`  - ${log.date} | ${log.subject_name}: ${log.status} (${log.type})${log.notes ? ` - Note: ${log.notes}` : ''}`)
-        }
-        lines.push('')
-    }
-
-    if (resultRows.length) {
-        lines.push('## Detailed Semester Results')
-        for (const row of resultRows) {
-            const isSameSem = row.semester === selectedSemester
-            lines.push(`  ### Semester ${row.semester} (SGPA: ${row.sgpa}, Credits: ${row.total_credits}, Marks: ${row.total_marks || 'N/A'}/${row.max_marks || 'N/A'}, Declaration/Import Date: ${new Date(row.updated_at).toLocaleString('en-GB')}${isSameSem ? ' - Selected' : ''})`)
-            const rowSubjects = Array.isArray(row.subjects) ? row.subjects as any[] : []
-            for (const sub of rowSubjects) {
-                const isPending = sub.is_pending || sub.grade === '-'
-                const internal = sub.internal_theory ?? sub.internal_practical ?? 0
-                const external = sub.external_theory ?? sub.external_practical ?? 0
-                const total = sub.total_marks ?? (Number(internal) + Number(external))
-                const max = sub.max_marks ?? 100
-                lines.push(`    - ${sub.name || sub.subject_name || 'Subject'} (${sub.code || sub.paper_code || 'N/A'}): ${isPending ? 'Pending/Declared Late' : `Grade: ${sub.grade} | Marks: ${total}/${max} (Int: ${internal}, Ext: ${external}) | Credits: ${sub.credits ?? 3}`}`)
-            }
-        }
-        lines.push('')
-    }
-
-    if (notes && notes.length > 0) {
-        lines.push('## User Notes & Checklists (Todos)')
-        const textNotes = notes.filter(n => !n.is_todo)
-        const todoNotes = notes.filter(n => n.is_todo)
-
-        let totalTodosCount = 0
-        let completedTodosCount = 0
-        for (const todoNote of todoNotes) {
-            const items = Array.isArray(todoNote.todos) ? todoNote.todos as any[] : []
-            totalTodosCount += items.length
-            completedTodosCount += items.filter(t => t.completed).length
-        }
-        lines.push(`Total Checklist/Todo Tasks: ${completedTodosCount}/${totalTodosCount} Completed`)
-
-        if (textNotes.length > 0) {
-            lines.push('  ### Notes')
-            for (const note of textNotes) {
-                // Strip HTML tags from note content to keep context compact and clean
-                const plainContent = note.content
-                    ? note.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-                    : ''
-                lines.push(`    - **${note.title || 'Untitled'}** (Category: ${note.category}): ${plainContent}`)
-            }
-        }
-
-        if (todoNotes.length > 0) {
-            lines.push('  ### Checklists (Todos)')
-            for (const todoNote of todoNotes) {
-                lines.push(`    - **${todoNote.title || 'Todo List'}** (Category: ${todoNote.category}):`)
-                const items = Array.isArray(todoNote.todos) ? todoNote.todos as any[] : []
-                if (items.length > 0) {
-                    for (const item of items) {
-                        const status = item.completed ? '[x]' : '[ ]'
-                        lines.push(`      ${status} ${item.text || 'Item'}`)
-                    }
-                } else {
-                    lines.push('      (No tasks in this list)')
-                }
-            }
         }
         lines.push('')
     }
@@ -293,15 +205,6 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
         lines.push('')
     }
 
-    if (skills.length) {
-        lines.push('## Skill Inventory')
-        const avgMastery = skills.length ? Math.round(skills.reduce((sum, s) => sum + (s.progress || 0), 0) / skills.length) : 0
-        lines.push(`Total Tracked Skills: ${skills.length} | Average Mastery: ${avgMastery}%`)
-        for (const skill of skills) {
-             lines.push(`  - ${skill.name} (Category: ${skill.category || 'General'}): ${skill.progress || 0}% Mastery (${skill.level || 'Beginner'}) | Notes: ${skill.notes || 'None'}`)
-        }
-        lines.push('')
-    }
 
     if (systemLogs.length) {
         lines.push('## Recent Activity Logs')
@@ -314,7 +217,7 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
     return lines.join('\n')
 }
 
-const systemPrompt = `You are Zenith Assistant, a high-performance AI academic strategist.
+const systemPrompt = `You are Semester Assistant, a high-performance AI academic strategist.
 
 You have direct, real-time access to the student's unified database. Your mission is to provide precise reporting, strategic planning, and automated check-ins. Make your replies ultra-useful and concrete.
 

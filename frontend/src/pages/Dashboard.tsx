@@ -114,7 +114,15 @@ const SubjectRow: React.FC<{
             <td className="px-6 py-3.5 font-bold text-on-surface">
                 <div>
                     <p className="truncate max-w-[200px] leading-tight text-xs">{subject.name}</p>
-                    <span className="text-[8px] font-semibold text-on-surface-variant/40 uppercase tracking-widest mt-1 inline-block">{subject.type || 'Theory'}</span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[8px] font-semibold text-on-surface-variant/40 uppercase tracking-widest">{subject.type || 'Theory'}</span>
+                        {subject.credits !== null && subject.credits !== undefined && (
+                            <>
+                                <span className="w-1 h-1 rounded-full bg-on-surface-variant/20" />
+                                <span className="text-[8px] font-bold text-primary/70 uppercase tracking-widest">{subject.credits} Credits</span>
+                            </>
+                        )}
+                    </div>
                 </div>
             </td>
             <td className="px-6 py-3.5 text-on-surface-variant/50 font-medium text-xs">
@@ -471,7 +479,7 @@ const Dashboard: React.FC = () => {
                             <div className="border-t border-outline/40 pt-4 mt-6">
                                 <Link
                                     to="/settings"
-                                    className="w-full h-10.5 flex items-center justify-center gap-2 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-sm"
+                                    className="w-full h-10 flex items-center justify-center gap-2 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-sm"
                                 >
                                     <SettingsIcon size={12} />
                                     Configure Settings
@@ -513,7 +521,7 @@ const Dashboard: React.FC = () => {
                             <div className="border-t border-outline/40 pt-4 mt-6 shrink-0">
                                 <Link
                                     to="/timetable"
-                                    className="w-full h-10.5 flex items-center justify-center gap-1 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-sm"
+                                    className="w-full h-10 flex items-center justify-center gap-1 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-sm"
                                 >
                                     View Full Timetable
                                     <ChevronRight size={12} />
@@ -523,7 +531,7 @@ const Dashboard: React.FC = () => {
 
 
                         {/* Bento Card 5: Courses Breakdown */}
-                        <div className="rounded-xl border border-outline/50 bg-surface overflow-hidden lg:col-span-3 hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)] mt-2">
+                        <div className="rounded-xl border border-outline/50 bg-surface overflow-hidden md:col-span-3 hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)] mt-2">
                             <div className="px-6 py-5 border-b border-outline/30 bg-surface-container/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Courses Breakdown</span>
                                 {/* Category filter tabs */}
@@ -575,35 +583,114 @@ const Dashboard: React.FC = () => {
                                     <p className="text-xs font-bold text-on-surface-variant/40 uppercase tracking-widest">No subjects tracked yet</p>
                                 </div>
                                 ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse text-xs select-none min-w-[650px]">
-                                        <thead>
-                                            <tr className="border-b border-outline/30 bg-surface-container/20 text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">
-                                                <th className="px-6 py-3.5">Code</th>
-                                                <th className="px-6 py-3.5">Subject Name</th>
-                                                <th className="px-6 py-3.5">Professor</th>
-                                                <th className="px-6 py-3.5 text-center">Attended</th>
-                                                <th className="px-6 py-3.5 text-center">Percentage</th>
-                                                <th className="px-6 py-3.5 text-center">Can Bunk / Needed</th>
-                                                <th className="px-6 py-3.5 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-outline/20">
-                                            {sortSubs(filteredSubjects).map((subject) => (
-                                                <SubjectRow
+                                <>
+                                    {/* Desktop View */}
+                                    <div className="hidden md:block overflow-x-auto">
+                                        <table className="w-full text-left border-collapse text-xs select-none min-w-[650px]">
+                                            <thead>
+                                                <tr className="border-b border-outline/30 bg-surface-container/20 text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">
+                                                    <th className="px-6 py-3.5">Code</th>
+                                                    <th className="px-6 py-3.5">Subject Name</th>
+                                                    <th className="px-6 py-3.5">Professor</th>
+                                                    <th className="px-6 py-3.5 text-center">Attended</th>
+                                                    <th className="px-6 py-3.5 text-center">Percentage</th>
+                                                    <th className="px-6 py-3.5 text-center">Can Bunk / Needed</th>
+                                                    <th className="px-6 py-3.5 text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-outline/20">
+                                                {sortSubs(filteredSubjects).map((subject) => (
+                                                    <SubjectRow
+                                                        key={subject._id}
+                                                        subject={subject}
+                                                        targetThreshold={targetThreshold}
+                                                        classesNeeded={classesNeeded}
+                                                        classesCanSkip={classesCanSkip}
+                                                        triggerBubbleMenu={triggerBubbleMenu}
+                                                        setEditingSubject={setEditingSubject}
+                                                        handleDeleteSubject={handleDeleteSubject}
+                                                    />
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Mobile/Tablet Card-list View */}
+                                    <div className="block md:hidden divide-y divide-outline/20">
+                                        {sortSubs(filteredSubjects).map((subject) => {
+                                            const pct = subject.attendance_percentage || 0;
+                                            const isCritical = pct < targetThreshold;
+                                            const needed = classesNeeded(subject.attended || 0, subject.total || 0);
+                                            const canSkip = classesCanSkip(subject.attended || 0, subject.total || 0);
+
+                                            return (
+                                                <div
                                                     key={subject._id}
-                                                    subject={subject}
-                                                    targetThreshold={targetThreshold}
-                                                    classesNeeded={classesNeeded}
-                                                    classesCanSkip={classesCanSkip}
-                                                    triggerBubbleMenu={triggerBubbleMenu}
-                                                    setEditingSubject={setEditingSubject}
-                                                    handleDeleteSubject={handleDeleteSubject}
-                                                />
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                                    className="p-5 flex flex-col gap-3 hover:bg-surface-container/10 transition-colors"
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="font-mono text-[9px] font-bold text-on-surface-variant/40 tracking-wider">
+                                                                    {subject.code || 'COURSE'}
+                                                                </span>
+                                                                <span className="px-1.5 py-0.5 text-[8px] font-semibold tracking-wider rounded border border-outline bg-surface-container-low text-on-surface-variant/50 uppercase">
+                                                                    {subject.type || 'Theory'}
+                                                                </span>
+                                                            </div>
+                                                            <h4 className="text-xs font-bold text-on-surface truncate max-w-[220px]">
+                                                                {subject.name}
+                                                            </h4>
+                                                            {subject.professor && (
+                                                                <p className="text-[10px] text-on-surface-variant/50 font-medium mt-0.5 truncate max-w-[200px]">
+                                                                    Prof. {formatTeacherName(subject.professor)}
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="text-right flex flex-col items-end gap-1 shrink-0">
+                                                            <span className={`text-sm font-bold ${isCritical ? 'text-red-500' : 'text-on-surface'}`}>
+                                                                {Math.round(pct)}%
+                                                            </span>
+                                                            <span className="text-[10px] font-semibold text-on-surface-variant/40 leading-none">
+                                                                {subject.attended || 0}/{subject.total || 0} classes
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="w-full h-1 bg-on-surface/5 border border-outline/35 rounded-full overflow-hidden">
+                                                        <div className={`h-full ${isCritical ? 'bg-red-500' : 'bg-on-surface'}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between gap-4 mt-1 pt-1 border-t border-outline/10">
+                                                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border tracking-wide whitespace-nowrap ${
+                                                            isCritical 
+                                                                ? 'bg-red-500/5 border-red-500/10 text-red-500' 
+                                                                : 'bg-primary/5 border-outline/30 text-on-surface-variant/80'
+                                                        }`}>
+                                                            {isCritical ? `Need ${needed} cls` : `${canSkip} Bunks`}
+                                                        </span>
+
+                                                        <div className="flex gap-2 shrink-0">
+                                                            <button
+                                                                onClick={() => setEditingSubject(subject)}
+                                                                className="h-7 px-3 border border-outline hover:bg-surface-container rounded-lg flex items-center justify-center text-[10px] font-semibold text-on-surface transition-all cursor-pointer whitespace-nowrap"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteSubject(subject._id, subject.name)}
+                                                                className="h-7 px-3 border border-red-500/20 hover:bg-red-500/5 rounded-lg flex items-center justify-center text-[10px] font-semibold text-red-500 transition-all cursor-pointer whitespace-nowrap"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
                                 );
                             })()}
                         </div>

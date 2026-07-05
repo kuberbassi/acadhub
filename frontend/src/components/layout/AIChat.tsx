@@ -209,11 +209,15 @@ const AIChat: React.FC = () => {
                         <div
                             ref={scrollContainerRef}
                             onScroll={handleScroll}
-                            className="flex-1 overflow-y-auto px-5 py-4 space-y-5 custom-scrollbar bg-surface"
+                            className={`flex-1 px-5 py-4 custom-scrollbar bg-surface ${
+                                messages.length === 0
+                                    ? 'overflow-hidden flex flex-col justify-center'
+                                    : 'overflow-y-auto space-y-5'
+                            }`}
                         >
                             {/* Empty State */}
-                            {messages.length === 0 && !isTyping && (
-                                <div className="h-full flex flex-col items-center justify-center gap-5 py-6" style={{ minHeight: '320px' }}>
+                            {messages.length === 0 && (
+                                <div className="flex flex-col items-center justify-center gap-5">
                                     <div className="w-10 h-10 rounded-full flex items-center justify-center bg-surface border border-outline shadow-sm">
                                         <SemesterAIIcon className="w-5 h-5 text-on-surface" />
                                     </div>
@@ -263,8 +267,8 @@ const AIChat: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Scroll anchor & button */}
-                            <div ref={messagesEndRef} className="h-2" />
+                            {/* Scroll anchor */}
+                            {messages.length > 0 && <div ref={messagesEndRef} className="h-2" />}
                         </div>
 
                         {showScrollBtn && (

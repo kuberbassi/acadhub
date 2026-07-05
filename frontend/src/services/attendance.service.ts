@@ -6,8 +6,7 @@ import type {
     TimetableSchedule,
     Preferences,
     SystemLog,
-    AcademicRecord,
-    SemesterResult
+    AcademicRecord
 } from '@/types';
 
 const extractApiData = <T>(response: any, fallback: T): T => {
@@ -313,7 +312,8 @@ export const attendanceService = {
         categories?: string[],
         code?: string,
         professor?: string,
-        classroom?: string
+        classroom?: string,
+        credits?: number
     ): Promise<void> => {
         // Use modern REST endpoint
         await api.post('/api/academic/subjects', {
@@ -322,7 +322,8 @@ export const attendanceService = {
             categories,
             code,
             professor,
-            classroom
+            classroom,
+            credits
         });
         clearCacheByPrefix('subjects:');
     },
@@ -537,29 +538,6 @@ export const attendanceService = {
 
     updateAcademicRecord: async (_data: AcademicRecord): Promise<void> => {
         // stub
-    },
-
-    // Semester Results (IPU Grading)
-    getSemesterResults: async (): Promise<SemesterResult[]> => {
-        const response = await api.get('/api/academic/results');
-        return response.data.data;
-    },
-
-    getSemesterResult: async (semester: number): Promise<SemesterResult> => {
-        const response = await api.get('/api/academic/results');
-        const results: SemesterResult[] = response.data.data ?? [];
-        const found = results.find((r) => r.semester === semester);
-        if (!found) throw new Error(`No result for semester ${semester}`);
-        return found;
-    },
-
-    saveSemesterResult: async (data: Omit<SemesterResult, '_id' | 'timestamp'>): Promise<{ success: boolean; result: SemesterResult }> => {
-        const response = await api.post('/api/academic/results', data);
-        return response.data.data;
-    },
-
-    deleteSemesterResult: async (semester: number): Promise<void> => {
-        await api.delete(`/api/academic/results/${semester}`);
     },
 
     // Notices

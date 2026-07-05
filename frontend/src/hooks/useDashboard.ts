@@ -15,8 +15,7 @@ export const useDashboard = () => {
         staleTime: 30 * 1000,
         gcTime: 10 * 60 * 1000,
         refetchOnWindowFocus: true,
-        placeholderData: (previousData) => {
-            if (previousData) return previousData;
+        placeholderData: () => {
             return (attendanceService.getDashboardLocalCache(currentSemester) || undefined) as any;
         }
     });

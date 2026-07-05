@@ -168,7 +168,7 @@ const Settings: React.FC = () => {
     const inputCls = "w-full px-3 py-2.5 rounded-lg border border-outline bg-surface text-on-surface text-sm placeholder-on-surface-variant/30 focus:outline-none focus:border-on-surface/40 focus:ring-1 focus:ring-on-surface/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed";
 
     return (
-        <div className="max-w-3xl mx-auto pb-24">
+        <div className="max-w-3xl mx-auto pb-36">
             {/* Page Header */}
             <div className="mb-8">
                 <div className="flex justify-between items-center">
@@ -177,6 +177,9 @@ const Settings: React.FC = () => {
                             Account / Settings
                         </p>
                         <h1 className="text-2xl font-bold text-on-surface tracking-tight">Settings</h1>
+                        <p className="text-xs text-on-surface-variant/60 mt-1">
+                            💡 Tip: Pressing <kbd className="px-1.5 py-0.5 rounded bg-surface-container border border-outline text-[10px] font-mono font-bold">Shift + /</kbd> (or <kbd className="px-1.5 py-0.5 rounded bg-surface-container border border-outline text-[10px] font-mono font-bold">?</kbd>) anywhere will display all quick keyboard navigation shortcuts.
+                        </p>
                     </div>
                     <button
                         onClick={toggleTheme}

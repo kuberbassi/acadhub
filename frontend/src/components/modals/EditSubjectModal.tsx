@@ -25,6 +25,7 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
         classroom: '',
         syllabus: '',
         semester: 1,
+        credits: 3,
         attended: 0,
         total: 0,
         practical_total: 10,
@@ -40,6 +41,7 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                 classroom: subject.classroom || '',
                 syllabus: subject.syllabus || '',
                 semester: subject.semester || 1,
+                credits: subject.credits !== undefined ? Number(subject.credits) : 3,
                 attended: subject.attended || 0,
                 total: subject.total || 0,
                 practical_total: 10,
@@ -65,6 +67,7 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                     classroom: details.classroom || prev.classroom,
                     syllabus: details.syllabus || prev.syllabus,
                     semester: details.semester || prev.semester,
+                    credits: details.credits !== null && details.credits !== undefined ? Number(details.credits) : prev.credits,
                     attended: details.attended ?? prev.attended,
                     total: details.total ?? prev.total,
                     practical_total: details.practicals?.total ?? 10,
@@ -76,9 +79,21 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
         }
     };
 
+    // Automatic smart credits assigner
+    useEffect(() => {
+        const current = (formData as any).categories || [];
+        if (current.includes('Theory') && !current.includes('Practical')) {
+            setFormData(prev => ({ ...prev, credits: 3 }));
+        } else if (current.includes('Practical') && !current.includes('Theory')) {
+            setFormData(prev => ({ ...prev, credits: 1 }));
+        } else if (current.includes('Theory') && current.includes('Practical')) {
+            setFormData(prev => ({ ...prev, credits: 4 }));
+        }
+    }, [(formData as any).categories]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        const isNumeric = ['attended', 'total', 'practical_total', 'assignment_total'].includes(name);
+        const isNumeric = ['credits', 'attended', 'total', 'practical_total', 'assignment_total'].includes(name);
         setFormData(prev => ({ ...prev, [name]: isNumeric ? parseInt(value) || 0 : value }));
     };
 
@@ -129,8 +144,8 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                     </div>
                 </div>
 
-                {/* Categories & Code Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Categories, Code, & Credits Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Categories Multi-Select */}
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-on-surface-variant/70 uppercase ml-1">Categories</label>
@@ -175,9 +190,26 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                             />
                         </div>
                     </div>
+
+                    {/* Credits */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-on-surface-variant/70 uppercase ml-1">Credits</label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                name="credits"
+                                value={formData.credits}
+                                onChange={handleChange}
+                                min="0"
+                                max="10"
+                                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-outline focus:border-primary focus:outline-none transition-all text-on-surface placeholder:text-on-surface-variant/30"
+                                placeholder="Credits (e.g. 3)"
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Professor */}
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-on-surface-variant/70 uppercase ml-1">Professor</label>
@@ -231,7 +263,7 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                 <div className="p-4 rounded-lg bg-orange-500/10 dark:bg-orange-500/5 border border-orange-500/20">
                     <label className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase mb-2 block">⚠️ Manual Attendance Override</label>
                     <p className="text-xs text-on-surface-variant/60 mb-3">Use this to fix incorrect counts. Be careful!</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-xs font-semibold text-on-surface-variant/70 uppercase ml-1">Classes Attended</label>
                             <input
@@ -256,9 +288,9 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                         </div>
 
                         {/* Assignment & Practical Totals Override */}
-                        <div className="col-span-2 p-4 rounded-lg bg-surface-container/30 border border-outline">
+                        <div className="col-span-1 sm:col-span-2 p-4 rounded-lg bg-surface-container/30 border border-outline">
                             <label className="text-xs font-bold text-on-surface-variant/80 uppercase mb-2 block">🎯 Target Totals</label>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {((formData as any).categories?.includes('Practical')) && (
                                     <div className="space-y-2">
                                         <label className="text-xs font-semibold text-on-surface-variant/70 uppercase ml-1">Practical Total</label>

@@ -7,13 +7,10 @@ export type UserData = {
   attendance_logs: unknown[]
   timetable?: unknown[]
   timetables?: unknown[]
-  semester_results: unknown[]
   manual_courses: unknown[]
   user_preferences?: unknown[]
   user_preference?: unknown[]
-  skills: unknown[]
   system_logs: unknown[]
-  notes?: unknown[]
   user_profile?: unknown
 }
 
@@ -34,12 +31,9 @@ export async function clearUserData(userId: string) {
   await prisma.subject.deleteMany({ where: { id: { in: subs.map((s: any) => s.id) } } })
   await prisma.attendanceLog.deleteMany({ where: { user_id: userId } })
   await prisma.timetable.deleteMany({ where: { user_id: userId } })
-  await prisma.semesterResult.deleteMany({ where: { user_id: userId } })
   await prisma.manualCourse.deleteMany({ where: { user_id: userId } })
   await prisma.userPreference.deleteMany({ where: { user_id: userId } })
-  await prisma.skill.deleteMany({ where: { user_id: userId } })
   await prisma.systemLog.deleteMany({ where: { user_id: userId } })
-  await prisma.note.deleteMany({ where: { user_id: userId } })
 }
 
 export function getSafeProfileUpdate(profile: any) {
@@ -63,16 +57,13 @@ export function getSafeProfileUpdate(profile: any) {
 }
 
 export async function collectUserData(userId: string): Promise<UserData> {
-  const [subjects, attendance_logs, timetable, semester_results, manual_courses, user_preferences, skills, system_logs, notes, user] = await Promise.all([
+  const [subjects, attendance_logs, timetable, manual_courses, user_preferences, system_logs, user] = await Promise.all([
     prisma.subject.findMany({ where: { user_id: userId } }),
     prisma.attendanceLog.findMany({ where: { user_id: userId } }),
     prisma.timetable.findMany({ where: { user_id: userId } }),
-    prisma.semesterResult.findMany({ where: { user_id: userId } }),
     prisma.manualCourse.findMany({ where: { user_id: userId } }),
     prisma.userPreference.findMany({ where: { user_id: userId } }),
-    prisma.skill.findMany({ where: { user_id: userId } }),
     prisma.systemLog.findMany({ where: { user_id: userId }, orderBy: { timestamp: 'desc' }, take: 500 }),
-    prisma.note.findMany({ where: { user_id: userId } }),
     prisma.user.findUnique({ where: { id: userId } }),
   ])
 
@@ -80,12 +71,9 @@ export async function collectUserData(userId: string): Promise<UserData> {
     subjects,
     attendance_logs,
     timetable,
-    semester_results,
     manual_courses,
     user_preferences,
-    skills,
     system_logs,
-    notes,
   }
 
   if (user) {
@@ -99,74 +87,70 @@ export async function collectUserData(userId: string): Promise<UserData> {
 export async function createInBatches<T>(items: T[], worker: (item: T) => Promise<unknown>, batchSize: number = 25) {
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize)
-    await Promise.all(batch.map(worker))
+    await Promise.all(batch.map((item) => worker(item)))
   }
 }
 
 export async function restoreUserData(userId: string, rawData: UserData) {
+  await clearUserData(userId)
+
   const idMap = new Map<string, string>()
 
   if (rawData.subjects?.length) {
     const subjectsData = (rawData.subjects as any[]).map((s) => {
-      const oldId = normalizeValue(s.id ?? s._id)
+      const oldId = String(normalizeValue(s.id ?? s._id) ?? '')
       const newId = randomUUID()
-      if (oldId) idMap.set(String(oldId), newId)
+      if (oldId) idMap.set(oldId, newId)
       return {
         id: newId,
         user_id: userId,
         name: String(s.name ?? ''),
-        code: String(s.code ?? ''),
-        professor: String(s.professor ?? ''),
-        classroom: String(s.classroom ?? ''),
-        semester: Number(normalizeValue(s.semester) ?? 1),
-        type: String(s.type ?? 'theory').toLowerCase(),
-        credits: s.credits != null ? Number(normalizeValue(s.credits)) : null,
+        code: s.code ? String(s.code) : null,
+        professor: s.professor ? String(s.professor) : null,
+        target: Number(normalizeValue(s.target ?? s.target_attendance) ?? 75),
         attended: Number(normalizeValue(s.attended) ?? 0),
         total: Number(normalizeValue(s.total) ?? 0),
-        target: Number(normalizeValue(s.target) ?? 75),
+        semester: Number(normalizeValue(s.semester) ?? 1),
         categories: Array.isArray(s.categories) ? s.categories : ['Theory'],
         practicals: s.practicals ?? null,
         assignments: s.assignments ?? null,
-        syllabus: s.syllabus ?? null,
+        credits: s.credits !== undefined ? Number(s.credits) : 3,
+        updated_at: s.updated_at ? new Date(normalizeValue(s.updated_at)) : new Date(),
       }
     })
-    await createInBatches(subjectsData, (row) => prisma.subject.create({ data: row as any }))
+    await createInBatches(subjectsData as any[], (row) => prisma.subject.create({ data: row as any }))
   }
 
   if (rawData.attendance_logs?.length) {
-    const logsData = (rawData.attendance_logs as any[]).map((l) => {
-      const oldSubIdVal = normalizeValue(l.subject_id)
-      if (!oldSubIdVal) return null
-      const newSubId = idMap.get(String(oldSubIdVal))
-      if (!newSubId) return null
-      const timestamp = normalizeValue(l.timestamp)
+    const logsData = (rawData.attendance_logs as any[]).map((log) => {
+      const sRef = String(normalizeValue(log.subject_id ?? log.subjectId) ?? '')
+      const status = String(log.status ?? '').toLowerCase()
+      const type = String(log.type ?? '').toLowerCase()
       return {
         id: randomUUID(),
         user_id: userId,
-        subject_id: newSubId,
-        subject_name: String(l.subject_name ?? ''),
-        date: String(normalizeValue(l.date) ?? ''),
-        status: normalizeAttendanceStatus(normalizeValue(l.status)),
-        type: String(l.type ?? 'Lecture'),
-        notes: l.notes ?? null,
-        semester: l.semester != null ? Number(normalizeValue(l.semester)) : null,
-        substituted_by: l.substituted_by ? (idMap.get(String(normalizeValue(l.substituted_by))) || null) : null,
-        timestamp: timestamp ? new Date(timestamp) : new Date(),
+        subject_id: sRef && idMap.has(sRef) ? idMap.get(sRef)! : sRef,
+        subject_name: String(log.subject_name ?? ''),
+        date: String(log.date ?? '').substring(0, 10),
+        status: normalizeAttendanceStatus(status),
+        type: ['original', 'substitution', 'extra'].includes(type) ? type : 'original',
+        notes: log.notes ? String(log.notes) : null,
+        timestamp: log.timestamp ? new Date(normalizeValue(log.timestamp)) : new Date(),
       }
-    }).filter(Boolean) as any[]
-    await createInBatches(logsData, (row) => prisma.attendanceLog.create({ data: row as any }))
+    })
+    await createInBatches(logsData as any[], (row) => prisma.attendanceLog.create({ data: row as any }))
   }
 
-  const ttable = rawData.timetable || rawData.timetables
-  if (ttable?.length) {
-    const timetableData = (ttable as any[]).map((t) => {
-      const schedule = JSON.parse(JSON.stringify(t.schedule ?? {}))
-      for (const day of Object.keys(schedule)) {
-        if (!Array.isArray(schedule[day])) continue
-        for (const slot of schedule[day]) {
-          const slotType = String(slot.type ?? '').trim().toLowerCase()
-          const hasSubjectRef = String(normalizeValue(slot.subject_id ?? slot.subjectId) ?? '').trim().length > 0
-          const hasLabel = String(slot.label ?? slot.name ?? '').trim().length > 0
+  const ttData = rawData.timetable || rawData.timetables
+  if (Array.isArray(ttData) && ttData.length > 0) {
+    const timetableData = (ttData as any[]).map((t) => {
+      const schedule = (t.schedule as Record<string, any[]>) || {}
+      for (const [day, slots] of Object.entries(schedule)) {
+        if (!Array.isArray(slots)) continue
+        for (const slot of slots) {
+          const slotType = String(slot.type ?? '').toLowerCase()
+          const hasSubjectRef = slot.subject_id || slot.subjectId
+          const hasLabel = slot.label
           slot.id = String(normalizeValue(slot.id ?? slot._id) ?? randomUUID())
           delete slot._id
           if (slot.startTime && !slot.start_time) slot.start_time = slot.startTime
@@ -191,25 +175,6 @@ export async function restoreUserData(userId: string, rawData: UserData) {
       }
     })
     await createInBatches(timetableData as any[], (row) => prisma.timetable.create({ data: row as any }))
-  }
-
-  if (rawData.semester_results?.length) {
-    const resultsData = (rawData.semester_results as any[]).map((r) => ({
-      id: randomUUID(),
-      user_id: userId,
-      semester: Number(r.semester ?? 1),
-      subjects: r.subjects ?? [],
-      sgpa: Number(r.sgpa ?? 0),
-      total_credits: Number(r.total_credits ?? 0),
-      student_info: r.student_info ?? null,
-      source: String(r.source ?? 'manual').toLowerCase().includes('ipu') ? 'ipu_scraper' : 'manual',
-      enrollment_number: r.enrollment_number ?? null,
-      semester_label: r.semester_label ?? null,
-      total_marks: r.total_marks ?? null,
-      max_marks: r.max_marks ?? null,
-      updated_at: r.updated_at ? new Date(normalizeValue(r.updated_at)) : new Date(),
-    }))
-    await createInBatches(resultsData as any[], (row) => prisma.semesterResult.create({ data: row as any }))
   }
 
   if (rawData.manual_courses?.length) {
@@ -243,19 +208,6 @@ export async function restoreUserData(userId: string, rawData: UserData) {
     })
   }
 
-  if (rawData.skills?.length) {
-    const skillsData = (rawData.skills as any[]).map((s) => ({
-      id: randomUUID(),
-      user_id: userId,
-      name: String(s.name ?? ''),
-      category: s.category ?? null,
-      level: s.level ?? null,
-      progress: Number(s.progress ?? 0),
-      notes: s.notes ?? '',
-    }))
-    await createInBatches(skillsData as any[], (row) => prisma.skill.create({ data: row as any }))
-  }
-
   if (rawData.system_logs?.length) {
     const systemLogsData = (rawData.system_logs as any[]).map((entry) => ({
       user_id: userId,
@@ -267,31 +219,4 @@ export async function restoreUserData(userId: string, rawData: UserData) {
     }))
     await createInBatches(systemLogsData as any[], (row) => prisma.systemLog.create({ data: row as any }))
   }
-
-  if (rawData.notes?.length) {
-    const notesData = (rawData.notes as any[]).map((n) => ({
-      id: randomUUID(),
-      user_id: userId,
-      title: String(n.title ?? ''),
-      content: String(n.content ?? ''),
-      is_todo: Boolean(n.is_todo ?? false),
-      todos: n.todos ?? [],
-      category: String(n.category ?? 'General'),
-      color: String(n.color ?? ''),
-      is_pinned: Boolean(n.is_pinned ?? false),
-      is_archived: Boolean(n.is_archived ?? false),
-      created_at: n.created_at ? new Date(normalizeValue(n.created_at)) : new Date(),
-      updated_at: n.updated_at ? new Date(normalizeValue(n.updated_at)) : new Date(),
-    }))
-    await createInBatches(notesData as any[], (row) => prisma.note.create({ data: row as any }))
-  }
-
-
-  if (rawData.user_profile) {
-    const filteredProfile = getSafeProfileUpdate(rawData.user_profile)
-    if (Object.keys(filteredProfile).length) {
-      await prisma.user.update({ where: { id: userId }, data: filteredProfile as any })
-    }
-  }
 }
-

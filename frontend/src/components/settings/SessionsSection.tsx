@@ -133,86 +133,82 @@ const SessionsSection: React.FC<SessionsSectionProps> = ({ showToast }) => {
 
   return (
     <div className="space-y-6">
-      {/* Sessions Overview Header Card */}
-      <div className="rounded-xl border border-outline glass-panel p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-on-surface shrink-0">
-            <Shield size={24} />
+      {/* Sessions Container */}
+      <div className="border border-outline rounded-xl overflow-hidden bg-surface">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-outline bg-surface-container/50">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Shield size={14} className="text-on-surface-variant/50 shrink-0" />
+            <span className="text-xs font-semibold text-on-surface">Logged-in Devices</span>
+            <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border border-outline text-on-surface-variant/50 bg-surface ml-0 sm:ml-1.5 shrink-0">
+              {sessions.length} Active
+            </span>
           </div>
-          <div>
-            <h3 className="text-base font-bold text-on-surface tracking-tight">Logged-in Devices</h3>
-            <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest mt-1">
-              You are logged in to {sessions.length} active device{sessions.length > 1 ? 's' : ''}
-            </p>
-          </div>
+          {otherSessionsCount > 0 && (
+            <button
+              onClick={handleRevokeOthers}
+              disabled={revokingAll}
+              className="h-7 px-3 text-[10px] font-semibold uppercase tracking-wider rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/5 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap shrink-0 w-full sm:w-auto justify-center"
+            >
+              {revokingAll ? (
+                <RefreshCw size={10} className="animate-spin" />
+              ) : (
+                <LogOut size={10} />
+              )}
+              Log out other devices
+            </button>
+          )}
         </div>
 
-        {otherSessionsCount > 0 && (
-          <button
-            onClick={handleRevokeOthers}
-            disabled={revokingAll}
-            className="px-5 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {revokingAll ? (
-              <RefreshCw size={12} className="animate-spin" />
-            ) : (
-              <LogOut size={12} />
-            )}
-            Log out other devices
-          </button>
-        )}
-      </div>
+        <div className="divide-y divide-outline/30">
+          {sessions.map(session => {
+            const { os, browser } = getDeviceDetails(session.user_agent);
+            const deviceName = `${os} • ${browser}`;
 
-      {/* Sessions List */}
-      <div className="rounded-xl border border-outline glass-panel overflow-hidden divide-y divide-outline-variant">
-        {sessions.map(session => {
-          const { os, browser } = getDeviceDetails(session.user_agent);
-          const deviceName = `${os} • ${browser}`;
-
-          return (
-            <div
-              key={session.id}
-              className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 hover:bg-surface-container transition-colors group"
-            >
-              <div className="flex gap-4 min-w-0">
-                <div className="w-10 h-10 rounded-lg bg-surface-container border border-outline-variant flex items-center justify-center shrink-0 group-hover:border-outline transition-all">
-                  {getDeviceIcon(session.user_agent)}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center flex-wrap gap-2 mb-1">
-                    <h4 className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">
-                      {deviceName}
-                    </h4>
-                    {session.is_current && (
-                      <span className="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-[9px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
-                        <CheckCircle size={8} /> Current Session
-                      </span>
-                    )}
+            return (
+              <div
+                key={session.id}
+                className="flex items-center justify-between gap-4 p-5 hover:bg-surface-container/10 transition-colors"
+              >
+                <div className="flex gap-3.5 items-center min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-lg bg-surface-container border border-outline/65 flex items-center justify-center shrink-0">
+                    {getDeviceIcon(session.user_agent)}
                   </div>
-                  <p className="text-xs text-on-surface-variant/60 font-medium flex flex-wrap gap-x-3 gap-y-1">
-                    <span>IP: {session.ip}</span>
-                    <span className="text-on-surface-variant/20">•</span>
-                    <span>Last active: {formatDate(session.last_active_at)}</span>
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center flex-wrap gap-2 mb-0.5">
+                      <h4 className="text-xs font-bold text-on-surface truncate">
+                        {deviceName}
+                      </h4>
+                      {session.is_current && (
+                        <span className="px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-[8px] font-bold text-primary uppercase tracking-wider flex items-center gap-0.5 leading-none">
+                          <CheckCircle size={8} /> Current
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant/60 font-medium flex flex-wrap gap-x-2.5 gap-y-1">
+                      <span>IP: {session.ip}</span>
+                      <span className="text-on-surface-variant/20">•</span>
+                      <span>Last active: {formatDate(session.last_active_at)}</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              {!session.is_current && (
-                <button
-                  onClick={() => handleRevoke(session.id, deviceName)}
-                  disabled={revokingId === session.id}
-                  className="self-end md:self-auto px-4 py-2 rounded-lg bg-surface hover:bg-surface-container border border-outline text-[9px] font-bold text-on-surface-variant hover:text-on-surface uppercase tracking-wider transition-all disabled:opacity-50"
-                >
-                  {revokingId === session.id ? (
-                    <RefreshCw size={10} className="animate-spin" />
-                  ) : (
-                    'Terminate'
-                  )}
-                </button>
-              )}
-            </div>
-          );
-        })}
+                {!session.is_current && (
+                  <button
+                    onClick={() => handleRevoke(session.id, deviceName)}
+                    disabled={revokingId === session.id}
+                    className="shrink-0 h-7 px-3 border border-outline hover:bg-surface-container rounded-lg flex items-center justify-center text-[10px] font-bold uppercase tracking-wider text-on-surface transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                  >
+                    {revokingId === session.id ? (
+                      <RefreshCw size={10} className="animate-spin" />
+                    ) : (
+                      'Terminate'
+                    )}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

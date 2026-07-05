@@ -15,6 +15,7 @@ interface AddSubjectModalProps {
 const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ isOpen, onClose, onSuccess, currentSemester = 1 }) => {
     const [subjectName, setSubjectName] = useState('');
     const [semester, setSemester] = useState(currentSemester.toString());
+    const [credits, setCredits] = useState('3');
     const [categories, setCategories] = useState<string[]>(['Theory']);
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
@@ -24,10 +25,21 @@ const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ isOpen, onClose, onSu
         if (isOpen) {
             setSubjectName('');
             setSemester(currentSemester.toString());
+            setCredits('3');
             setCategories(['Theory']);
         }
     }, [isOpen, currentSemester]);
 
+    // Automatic smart credits assigner
+    React.useEffect(() => {
+        if (categories.includes('Theory') && !categories.includes('Practical')) {
+            setCredits('3');
+        } else if (categories.includes('Practical') && !categories.includes('Theory')) {
+            setCredits('1');
+        } else if (categories.includes('Theory') && categories.includes('Practical')) {
+            setCredits('4');
+        }
+    }, [categories]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,7 +50,15 @@ const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ isOpen, onClose, onSu
 
         setLoading(true);
         try {
-            await attendanceService.addSubject(subjectName, parseInt(semester), categories);
+            await attendanceService.addSubject(
+                subjectName,
+                parseInt(semester),
+                categories,
+                undefined,
+                undefined,
+                undefined,
+                parseInt(credits) || 0
+            );
             showToast('success', 'Subject added successfully');
             onSuccess();
             onClose();
@@ -65,7 +85,7 @@ const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ isOpen, onClose, onSu
                     autoFocus
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Input
                         label="Semester"
                         type="number"
@@ -73,6 +93,15 @@ const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ isOpen, onClose, onSu
                         max="8"
                         value={semester}
                         onChange={(e) => setSemester(e.target.value)}
+                    />
+
+                    <Input
+                        label="Credits"
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={credits}
+                        onChange={(e) => setCredits(e.target.value)}
                     />
 
                     <div className="space-y-2">

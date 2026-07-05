@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Shield, ShieldAlert, Upload, Copy, Check, Cloud, RefreshCw, Unlink } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import { attendanceService } from '@/services/attendance.service';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -231,42 +230,35 @@ const SettingsDataSection: React.FC<SettingsDataSectionProps> = ({ onLogout, onD
     };
 
     return (
-        <div className="space-y-4">
-            <div className="rounded-xl border border-outline glass-panel p-4 sm:p-8">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
-                            <Shield size={20} />
-                        </div>
-                        <div>
-                            <h3 className="text-base font-bold text-on-surface tracking-tight">Data & Storage</h3>
-                            <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Backup & Restore Management</p>
-                        </div>
-                    </div>
+        <div className="space-y-6">
+            {/* Section 1: Offline Backup & Restore */}
+            <div className="border border-outline rounded-xl overflow-hidden bg-surface">
+                <div className="flex items-center gap-2 px-5 py-4 border-b border-outline bg-surface-container/50">
+                    <Shield size={14} className="text-on-surface-variant/50" />
+                    <span className="text-xs font-semibold text-on-surface">Offline Backup & Restore</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 sm:p-6 rounded-xl bg-surface-container border border-outline-variant">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface"><Download size={18} /></div>
-                            <div>
-                                <h4 className="text-sm font-bold text-on-surface tracking-tight">Backup Data</h4>
-                                <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase">Export to .JSON</p>
-                            </div>
+                
+                <div className="p-5 divide-y divide-outline/30 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 last:pb-0 last:border-b-0">
+                        <div className="max-w-md">
+                            <h4 className="text-xs font-bold text-on-surface">Export Configuration</h4>
+                            <p className="text-[11px] text-on-surface-variant/60 mt-0.5">Save your entire profile, attendance logs, and app preferences to a secure offline JSON file.</p>
                         </div>
-                        <p className="text-xs text-on-surface-variant/70 mb-6 leading-relaxed">Save your entire profile, attendance logs, and settings to a secure offline file.</p>
-                        <Button variant="secondary" size="lg" className="w-full justify-center rounded-lg" onClick={handleExport}>Export Backup</Button>
+                        <button
+                            onClick={handleExport}
+                            className="shrink-0 h-8 px-3 border border-outline bg-surface hover:bg-surface-container rounded-lg flex items-center justify-center text-on-surface text-[11px] font-semibold uppercase tracking-wider cursor-pointer transition-all shadow-sm whitespace-nowrap"
+                        >
+                            <Download size={12} className="mr-1.5" /> Export Backup
+                        </button>
                     </div>
-                    <div className="p-4 sm:p-6 rounded-xl bg-surface-container border border-outline-variant">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface"><Upload size={18} /></div>
-                            <div>
-                                <h4 className="text-sm font-bold text-on-surface tracking-tight">Restore Data</h4>
-                                <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase">Load from .JSON</p>
-                            </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 last:pb-0 last:border-b-0">
+                        <div className="max-w-md">
+                            <h4 className="text-xs font-bold text-on-surface">Import Configuration</h4>
+                            <p className="text-[11px] text-on-surface-variant/60 mt-0.5">Load a previously saved backup file. This will overwrite your current settings and data.</p>
                         </div>
-                        <p className="text-xs text-on-surface-variant/70 mb-6 leading-relaxed">Overwrite current settings with a previously saved backup file.</p>
-                        <label className="block w-full cursor-pointer transition-all border border-outline bg-surface hover:bg-surface-container h-12 rounded-lg flex items-center justify-center text-on-surface text-[11px] font-bold uppercase tracking-wider">
-                            Import Backup
+                        <label className="shrink-0 h-8 px-3 border border-outline bg-surface hover:bg-surface-container rounded-lg flex items-center justify-center text-on-surface text-[11px] font-semibold uppercase tracking-wider cursor-pointer transition-all shadow-sm whitespace-nowrap">
+                            <Upload size={12} className="mr-1.5" /> Import Backup
                             <input
                                 type="file"
                                 className="hidden"
@@ -287,204 +279,216 @@ const SettingsDataSection: React.FC<SettingsDataSectionProps> = ({ onLogout, onD
                         </label>
                     </div>
                 </div>
+            </div>
 
-                {/* Cloud Sync & Migration */}
-                <div className="mt-8 pt-8 border-t border-outline-variant">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
-                            <Cloud size={20} />
-                        </div>
-                        <div>
-                            <h3 className="text-base font-bold text-on-surface tracking-tight">Cloud Sync & Backup</h3>
-                            <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Preserve & Port Academic Records</p>
-                        </div>
-                    </div>
- 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Google Drive Sync & Backup */}
-                        <div className="p-4 sm:p-6 rounded-xl bg-surface-container border border-outline-variant space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-bold text-on-surface tracking-tight">Google Drive Backup</h4>
-                                {driveStatus?.google_drive_linked && (
-                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[9px] font-bold uppercase tracking-wider">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        Linked
-                                    </span>
-                                )}
+            {/* Section 2: Cloud Sync & Migration */}
+            <div className="border border-outline rounded-xl overflow-hidden bg-surface">
+                <div className="flex items-center gap-2 px-5 py-4 border-b border-outline bg-surface-container/50">
+                    <Cloud size={14} className="text-on-surface-variant/50" />
+                    <span className="text-xs font-semibold text-on-surface">Cloud Sync & Migration</span>
+                </div>
+
+                <div className="p-5 divide-y divide-outline/30 space-y-4">
+                    {/* Google Drive Sync */}
+                    <div className="pb-4 last:pb-0 last:border-b-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="max-w-md">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-bold text-on-surface">Google Drive Sync</h4>
+                                    {driveStatus?.google_drive_linked && (
+                                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] font-bold uppercase tracking-wider leading-none">
+                                            <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                            Linked
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-[11px] text-on-surface-variant/60 mt-0.5">
+                                    Securely back up all your academic data to your private Google Drive AppData folder.
+                                </p>
                             </div>
-                            
-                            {!driveStatus?.google_drive_linked ? (
-                                <div className="space-y-4">
-                                    <p className="text-xs text-on-surface-variant/70 leading-relaxed">
-                                        Securely back up all your academic data to your private Google Drive AppData folder. Backups are automatic and isolated.
-                                    </p>
+
+                            <div className="shrink-0 w-full sm:w-auto">
+                                {!driveStatus?.google_drive_linked ? (
                                     <button
                                         disabled={driveLoading}
                                         onClick={() => linkDrive()}
-                                        className="w-full h-12 rounded-lg bg-on-surface text-surface hover:bg-on-surface/90 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                                        className="h-8 px-3 bg-on-surface text-surface hover:bg-on-surface/90 text-[11px] font-semibold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 w-full sm:w-auto text-center"
                                     >
-                                        <Cloud size={14} /> Connect Google Drive
+                                        <Cloud size={12} /> Connect Drive
+                                    </button>
+                                ) : (
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                                        <Select
+                                            value={driveStatus.google_drive_backup_frequency}
+                                            onChange={(e) => handleUpdateFrequency(e.target.value)}
+                                            options={[
+                                                { value: 'daily', label: 'Daily' },
+                                                { value: 'weekly', label: 'Weekly' },
+                                                { value: 'monthly', label: 'Monthly' },
+                                                { value: 'never', label: 'Manual' }
+                                            ]}
+                                            className="!py-1 !px-2 !rounded-lg !text-[11px] !h-8 w-full sm:!w-24 border-outline whitespace-nowrap shrink-0"
+                                        />
+                                        <div className="flex gap-2 items-center w-full">
+                                            <button
+                                                disabled={driveLoading}
+                                                onClick={handleDriveBackup}
+                                                className="h-8 px-3 bg-on-surface text-surface hover:bg-on-surface/90 text-[11px] font-semibold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 flex-1 sm:flex-initial"
+                                            >
+                                                <RefreshCw size={11} className={driveLoading ? 'animate-spin' : ''} /> Sync Now
+                                            </button>
+                                            <button
+                                                disabled={driveLoading}
+                                                onClick={handleDisconnectDrive}
+                                                className="h-8 w-8 rounded-lg border border-outline hover:border-red-500/30 hover:bg-red-500/5 text-on-surface-variant/60 hover:text-red-500 transition-all flex items-center justify-center cursor-pointer whitespace-nowrap shrink-0"
+                                                title="Disconnect Drive"
+                                            >
+                                                <Unlink size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Last sync info */}
+                        {driveStatus?.google_drive_linked && (
+                            <p className="text-[10px] text-on-surface-variant/40 mt-1 font-mono">
+                                Last Sync: {driveStatus.google_drive_last_backup 
+                                    ? new Date(driveStatus.google_drive_last_backup).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+                                    : 'Never'}
+                            </p>
+                        )}
+
+                        {/* Backups List */}
+                        {driveStatus?.google_drive_linked && driveBackups.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-outline/20 space-y-1.5">
+                                <p className="text-[9px] font-bold uppercase text-on-surface-variant/40 tracking-wider">Available Cloud Backups</p>
+                                <div className="max-h-[120px] overflow-y-auto space-y-1 pr-1">
+                                    {driveBackups.map((b) => (
+                                        <div key={b.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-2 gap-2.5 sm:gap-2 rounded-lg bg-surface-container/30 border border-outline/20 text-[11px]">
+                                            <div className="flex items-baseline flex-wrap gap-x-2">
+                                                <span className="font-semibold text-on-surface">
+                                                    {new Date(b.created_at).toLocaleDateString()} at {new Date(b.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                <span className="text-[10px] text-on-surface-variant/40">({(b.size / 1024).toFixed(1)} KB)</span>
+                                            </div>
+                                            <div className="flex gap-1.5 shrink-0 self-end sm:self-auto">
+                                                <button
+                                                    disabled={driveLoading}
+                                                    onClick={() => handleDriveDownload(b.id, b.created_at)}
+                                                    className="h-6 px-2.5 text-[9px] font-bold uppercase border border-outline hover:bg-surface-container rounded-md transition-all cursor-pointer text-on-surface whitespace-nowrap shrink-0 flex items-center justify-center"
+                                                >
+                                                    Download
+                                                </button>
+                                                <button
+                                                    disabled={driveLoading}
+                                                    onClick={() => handleDriveRestore(b.id)}
+                                                    className="h-6 px-2.5 text-[9px] font-bold uppercase bg-on-surface text-surface hover:opacity-90 rounded-md transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center justify-center"
+                                                >
+                                                    Restore
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Account Migration */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 last:pb-0 last:border-b-0">
+                        <div className="max-w-md">
+                            <h4 className="text-xs font-bold text-on-surface">Migrate Account Data</h4>
+                            <p className="text-[11px] text-on-surface-variant/60 mt-0.5">Transfer all your subjects, settings, and logs to a new Google account seamlessly.</p>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-2 shrink-0 items-stretch sm:items-center w-full sm:w-auto">
+                            {migrationKey ? (
+                                <div className="flex gap-1.5 items-center bg-surface-container border border-outline rounded-lg px-2.5 py-1 h-8 whitespace-nowrap shrink-0 justify-between w-full sm:w-auto">
+                                    <span className="font-mono text-[10px] text-on-surface max-w-[120px] truncate">{migrationKey}</span>
+                                    <button
+                                        onClick={handleCopyKey}
+                                        className="p-1 hover:bg-surface-container-high rounded text-on-surface transition-all cursor-pointer whitespace-nowrap shrink-0"
+                                    >
+                                        {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
                                     </button>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase text-on-surface-variant/40 mb-1.5">Frequency</p>
-                                            <Select
-                                                value={driveStatus.google_drive_backup_frequency}
-                                                onChange={(e) => handleUpdateFrequency(e.target.value)}
-                                                options={[
-                                                    { value: 'daily', label: 'Daily' },
-                                                    { value: 'weekly', label: 'Weekly' },
-                                                    { value: 'monthly', label: 'Monthly' },
-                                                    { value: 'never', label: 'Never (Manual)' }
-                                                ]}
-                                                className="!py-1.5 !px-3 !rounded-xl !text-xs !h-9"
-                                                fullWidth={true}
-                                            />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase text-on-surface-variant/40 mb-1">Last Sync</p>
-                                            <p className="text-xs font-bold text-on-surface py-1.5 truncate">
-                                                {driveStatus.google_drive_last_backup 
-                                                    ? new Date(driveStatus.google_drive_last_backup).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
-                                                    : 'Never'}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            disabled={driveLoading}
-                                            onClick={handleDriveBackup}
-                                            className="flex-1 h-10 rounded-xl bg-on-surface text-surface hover:bg-on-surface/90 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 animate-fade-in"
-                                        >
-                                            <RefreshCw size={13} className={driveLoading ? 'animate-spin' : ''} /> Backup Now
-                                        </button>
-                                        <button
-                                            disabled={driveLoading}
-                                            onClick={handleDisconnectDrive}
-                                            className="px-3 h-10 rounded-xl border border-outline hover:border-red-500/30 hover:bg-red-500/5 text-on-surface-variant/60 hover:text-red-500 transition-all flex items-center justify-center cursor-pointer"
-                                            title="Disconnect Drive"
-                                        >
-                                            <Unlink size={14} />
-                                        </button>
-                                    </div>
-
-                                    {/* Backups List */}
-                                    {driveBackups.length > 0 && (
-                                        <div className="border-t border-outline-variant pt-3 space-y-2">
-                                            <p className="text-[9px] font-bold uppercase text-on-surface-variant/40 tracking-wider">Available Cloud Backups</p>
-                                            <div className="max-h-[100px] overflow-y-auto space-y-1.5 pr-1 text-xs select-none">
-                                                {driveBackups.map((b) => (
-                                                    <div key={b.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-2 gap-2 sm:gap-4 rounded-lg bg-surface-container-high border border-outline-variant">
-                                                        <div className="min-w-0">
-                                                            <p className="font-bold text-[10px] text-on-surface truncate">
-                                                                {new Date(b.created_at).toLocaleDateString()} at {new Date(b.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </p>
-                                                            <p className="text-[9px] text-on-surface-variant/50">{(b.size / 1024).toFixed(1)} KB</p>
-                                                        </div>
-                                                        <div className="flex gap-1.5 w-full sm:w-auto">
-                                                            <button
-                                                                disabled={driveLoading}
-                                                                onClick={() => handleDriveDownload(b.id, b.created_at)}
-                                                                className="flex-1 sm:flex-initial px-2 py-1 text-[9px] font-extrabold uppercase border border-outline hover:bg-surface-container rounded transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1 text-on-surface"
-                                                                title="Download Backup JSON"
-                                                            >
-                                                                <Download size={10} />
-                                                                Download
-                                                            </button>
-                                                            <button
-                                                                disabled={driveLoading}
-                                                                onClick={() => handleDriveRestore(b.id)}
-                                                                className="flex-1 sm:flex-initial px-2 py-1 text-[9px] font-extrabold uppercase bg-on-surface text-surface hover:opacity-90 rounded transition-all cursor-pointer disabled:opacity-50 text-center"
-                                                            >
-                                                                Restore
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                <button
+                                    onClick={handleGenerateKey}
+                                    className="h-8 px-2.5 rounded-lg border border-outline hover:bg-surface-container text-[11px] font-semibold uppercase text-on-surface transition-all cursor-pointer shadow-sm whitespace-nowrap shrink-0 w-full sm:w-auto text-center flex items-center justify-center"
+                                >
+                                    Generate Key
+                                </button>
                             )}
-                        </div>
 
-                        {/* Migration tools */}
-                        <div className="p-4 sm:p-6 rounded-xl bg-surface-container border border-outline-variant space-y-4">
-                            <h4 className="text-sm font-bold text-on-surface tracking-tight">Migrate Account Data</h4>
-                            <p className="text-xs text-on-surface-variant/70 leading-relaxed">
-                                Move all your academic history to a new Google login account seamlessly.
-                            </p>
-
-                            <div className="space-y-3">
-                                {/* Generate Key */}
-                                <div className="flex flex-col gap-2">
-                                    {migrationKey ? (
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={migrationKey}
-                                                className="flex-1 px-3 py-2 text-xs font-mono rounded-lg border border-outline bg-surface text-on-surface focus:outline-none"
-                                            />
-                                            <button
-                                                onClick={handleCopyKey}
-                                                className="px-3 py-2 rounded-lg border border-outline bg-surface text-on-surface hover:bg-surface-container transition-all"
-                                            >
-                                                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={handleGenerateKey}
-                                            className="w-full h-10 rounded-xl border border-outline bg-surface hover:bg-surface-container text-xs font-bold uppercase tracking-wider text-on-surface transition-all"
-                                        >
-                                            Generate Migration Key
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Apply Key */}
-                                <div className="flex flex-col gap-2">
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Paste migration key here..."
-                                            value={inputKey}
-                                            onChange={(e) => setInputKey(e.target.value)}
-                                            className="flex-1 px-3 py-2 text-xs rounded-lg border border-outline bg-surface text-on-surface focus:outline-none"
-                                        />
-                                        <button
-                                            disabled={migrating}
-                                            onClick={handleCompleteMigration}
-                                            className="px-4 py-2 rounded-xl bg-on-surface text-surface hover:bg-on-surface/90 text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
-                                        >
-                                            Migrate
-                                        </button>
-                                    </div>
-                                </div>
+                            <div className="flex flex-col sm:flex-row gap-1.5 items-stretch sm:items-center w-full">
+                                <input
+                                    type="text"
+                                    placeholder="Paste key..."
+                                    value={inputKey}
+                                    onChange={(e) => setInputKey(e.target.value)}
+                                    className="px-2.5 py-1 text-[11px] rounded-lg border border-outline bg-surface text-on-surface placeholder-on-surface-variant/30 focus:outline-none focus:border-on-surface/40 h-8 w-full sm:w-48 transition-all shrink-0"
+                                />
+                                <button
+                                    disabled={migrating}
+                                    onClick={handleCompleteMigration}
+                                    className="h-8 px-3 rounded-lg bg-on-surface text-surface hover:bg-on-surface/90 text-[11px] font-semibold uppercase transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap shrink-0 w-full sm:w-auto text-center flex items-center justify-center"
+                                >
+                                    Migrate
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div className="mt-8 pt-8 border-t border-outline-variant">
-                    <div className="p-4 sm:p-6 rounded-xl bg-red-500/[0.02] border border-red-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-4 text-center md:text-left">
-                            <div className="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 shrink-0"><ShieldAlert size={24} /></div>
-                            <div>
-                                <h4 className="text-sm font-bold text-red-500 tracking-tight">Delete All Data</h4>
-                                <p className="text-[10px] font-bold text-red-500/60 uppercase tracking-widest">Permanent Data Erasure</p>
-                            </div>
+            {/* Section 3: Danger Zone */}
+            <div className="border border-red-500/20 rounded-xl overflow-hidden bg-red-500/[0.01]">
+                <div className="flex items-center gap-2 px-5 py-4 border-b border-red-500/20 bg-red-500/[0.03]">
+                    <ShieldAlert size={14} className="text-red-500" />
+                    <span className="text-xs font-semibold text-red-500">Danger Zone</span>
+                </div>
+
+                <div className="p-5 divide-y divide-red-500/10 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 last:pb-0 last:border-b-0">
+                        <div>
+                            <h4 className="text-xs font-bold text-on-surface">Sign Out</h4>
+                            <p className="text-[11px] text-on-surface-variant/60 mt-0.5">Sign out of your active academic profile on this device.</p>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                            <button onClick={() => void onLogout()} className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-outline text-[10px] font-bold uppercase text-on-surface hover:bg-surface-container transition-all text-center animate-fade-in">Sign Out</button>
-                            <button onClick={() => void onDeleteAllData()} className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-red-500 text-white text-[10px] font-bold uppercase shadow-xl shadow-red-500/20 hover:bg-red-600 transition-all text-center">Clear All Data</button>
-                            <button onClick={() => void onDeleteAccount()} className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-red-500/30 text-red-500 dark:text-red-400 text-[10px] font-bold uppercase hover:bg-red-500/10 transition-all text-center">Delete Account</button>
+                        <button
+                            onClick={() => void onLogout()}
+                            className="shrink-0 h-8 px-3 rounded-lg border border-outline text-[11px] font-semibold uppercase text-on-surface hover:bg-surface-container transition-all cursor-pointer shadow-sm"
+                        >
+                            Sign Out
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 pb-4 last:pb-0 last:border-b-0">
+                        <div>
+                            <h4 className="text-xs font-bold text-red-500">Wipe All Data</h4>
+                            <p className="text-[11px] text-on-surface-variant/60 mt-0.5">Irreversibly erase all subjects, attendance logs, timetables, and checklists.</p>
                         </div>
+                        <button
+                            onClick={() => void onDeleteAllData()}
+                            className="shrink-0 h-8 px-3 rounded-lg bg-red-500 text-white text-[11px] font-semibold uppercase hover:bg-red-600 transition-all cursor-pointer shadow-sm shadow-red-500/10"
+                        >
+                            Wipe Data
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 last:pb-0 last:border-b-0">
+                        <div>
+                            <h4 className="text-xs font-bold text-red-500">Delete Account Permanently</h4>
+                            <p className="text-[11px] text-on-surface-variant/60 mt-0.5">Remove your profile, Google Drive connections, and settings permanently.</p>
+                        </div>
+                        <button
+                            onClick={() => void onDeleteAccount()}
+                            className="shrink-0 h-8 px-3 rounded-lg border border-red-500/30 text-red-500 dark:text-red-400 text-[11px] font-semibold uppercase hover:bg-red-500/10 transition-all cursor-pointer shadow-sm"
+                        >
+                            Delete Account
+                        </button>
                     </div>
                 </div>
             </div>

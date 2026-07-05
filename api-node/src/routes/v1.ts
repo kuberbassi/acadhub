@@ -25,10 +25,8 @@ import academicRoutes from './academic.js'
 import dashboardRoutes from './dashboard.js'
 import timetableRoutes from './timetable.js'
 import profileRoutes from './profile.js'
-import skillsRoutes from './skills.js'
 import dataRoutes from './data.js'
 import aiRoutes from './ai.js'
-import notesRoutes from './notes.js'
 
 const v1Router = Router()
 
@@ -39,9 +37,7 @@ v1Router.use('/academic', academicRoutes)
 v1Router.use('/dashboard', dashboardRoutes)
 v1Router.use('/timetable', timetableRoutes)
 v1Router.use('/profile', profileRoutes)
-v1Router.use('/skills', skillsRoutes)
 v1Router.use('/data', dataRoutes)
 v1Router.use('/ai', aiRoutes)
-v1Router.use('/notes', notesRoutes)
 
 export default v1Router

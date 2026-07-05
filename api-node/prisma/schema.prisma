@@ -22,11 +22,6 @@ enum AttendanceStatus {
   cancelled
 }
 
-enum ResultSource {
-  manual
-  ipu_scraper
-}
-
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -52,17 +47,14 @@ model User {
   created_at           DateTime @default(now())
   updated_at           DateTime @updatedAt
 
-  subjects         Subject[]
-  attendance_logs  AttendanceLog[]
-  semester_results SemesterResult[]
-  manual_courses   ManualCourse[]
-  timetables       Timetable[]
-  system_logs      SystemLog[]
-  user_backups     UserBackup[]
-  user_preference  UserPreference?
-  skills           Skill[]
-  notes            Note[]
-  sessions         UserSession[]
+  subjects        Subject[]
+  attendance_logs AttendanceLog[]
+  manual_courses  ManualCourse[]
+  timetables      Timetable[]
+  system_logs     SystemLog[]
+  user_backups    UserBackup[]
+  user_preference UserPreference?
+  sessions        UserSession[]
 
   @@map("users")
 }
@@ -141,29 +133,6 @@ model AttendanceLog {
   @@map("attendance_logs")
 }
 
-model SemesterResult {
-  id                String       @id @default(cuid())
-  user_id           String
-  enrollment_number String?
-  semester          Int
-  semester_label    String?
-  subjects          Json         @default("[]")
-  sgpa              Float        @default(0)
-  total_credits     Int          @default(0)
-  total_marks       String?
-  max_marks         String?
-  student_info      Json?
-  source            ResultSource @default(manual)
-  updated_at        DateTime     @default(now()) @updatedAt
-
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id, semester]) // Changed from @@unique to @@index to preserve historical duplicates
-  @@index([user_id])
-  @@index([enrollment_number])
-  @@map("semester_results")
-}
-
 model ManualCourse {
   id         String   @id @default(cuid())
   user_id    String
@@ -237,45 +206,3 @@ model UserPreference {
 
   @@map("user_preferences")
 }
-
-model Skill {
-  id         String   @id @default(cuid())
-  user_id    String
-  name       String
-  category   String?
-  level      String?
-  progress   Int      @default(0)
-  notes      String   @default("")
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id])
-  @@map("skills")
-}
-
-model Note {
-  id          String   @id @default(cuid())
-  user_id     String
-  title       String   @default("")
-  content     String   @default("")
-  is_todo     Boolean  @default(false)
-  todos       Json     @default("[]") // array of { id: string, text: string, completed: boolean, priority: string }
-  category    String   @default("General")
-  color       String   @default("") // monochrome color class
-  is_pinned   Boolean  @default(false)
-  is_archived Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id])
-  @@index([user_id, is_todo])
-  @@map("notes")
-}
-
-
-
-
