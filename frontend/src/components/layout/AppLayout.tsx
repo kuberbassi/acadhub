@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
-import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import AIChat from './AIChat';
 import PageTransition from '../ui/PageTransition';
 
+// Main application layout wrapper
 const AppLayout: React.FC = () => {
-    const location = useLocation();
     const [showScrollTop, setShowScrollTop] = useState(false);
 
     // Scroll-to-top display trigger - triggers as soon as scroll starts (>10px)
@@ -26,20 +25,17 @@ const AppLayout: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-background font-sans text-on-background flex relative overflow-x-hidden">
-            {/* Sidebar (Left-side docked navigation on desktop) */}
-            <Sidebar />
-
             {/* Main Content Area */}
-            <div className="flex-1 min-w-0 flex flex-col min-h-screen lg:pl-64">
+            <div className="flex-1 min-w-0 flex flex-col min-h-screen">
                 {/* Content Container - No header, starts from top, padded for sidebar */}
-                <main key={location.pathname} className="flex-1 w-full max-w-[1400px] mx-auto px-4 pt-10 pb-28 md:px-8 md:pt-12 md:pb-12 animate-fade-in relative z-10">
+                <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 pt-10 pb-28 md:px-8 md:pt-12 md:pb-12 relative z-10">
                     <PageTransition>
                         <Outlet />
                     </PageTransition>
                 </main>
             </div>
 
-            {/* Bottom Nav for Mobile */}
+            {/* Bottom Nav for Mobile & Desktop */}
             <BottomNav />
 
             {/* Neural AI Assistant */}

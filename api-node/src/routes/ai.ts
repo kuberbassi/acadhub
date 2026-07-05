@@ -60,8 +60,7 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
         lines.push('## User Profile')
         lines.push(`Name: ${user.name || 'Student'}`)
         lines.push(`Email: ${user.email}`)
-        lines.push(`Gender: ${user.gender || 'N/A'}`)
-        lines.push(`Phone Number: ${user.phone_number || 'N/A'}`)
+
         lines.push(`Institution/College: ${user.college || 'Unknown'}`)
         lines.push(`Course: ${user.course || 'N/A'}`)
         lines.push(`Branch: ${user.branch || 'N/A'}`)
@@ -331,7 +330,7 @@ You have direct, real-time access to the student's unified database. Your missio
 5. METRIC UNIFICATION: Use CGPA (Weighted), Overall Attendance, and Academic Strength as the definitive performance metrics. Always quote exact percentages and numbers.
 6. TODAY'S PENDING ACTION: Remind the student of any pending attendance logs that need to be marked today.
 7. SEMESTER CURATION: The context specifies the active selected semester (UI State). Unless the user explicitly specifies a particular semester in their prompt, you MUST default your answers and stats analysis to the currently active selected semester.
-8. PROFILE & SESSION AWARENESS: You have direct access to the student's complete profile (gender, phone number, default target attendance) and detailed system activity logs. Utilize these metrics when asked about user status, profile settings, or activity history.
+8. PROFILE & SESSION AWARENESS: You have direct access to the student's complete profile (default target attendance) and detailed system activity logs. Utilize these metrics when asked about user status, profile settings, or activity history.
 
 ## Strict Anti-Hallucination & Verification Guidelines (Targeting 99.9% Accuracy)
 - NEVER make up, invent, or extrapolate facts, grades, dates, backup statuses, or logs.
@@ -451,3 +450,5 @@ router.post('/chat_v2', chatHandler)
 router.post('/process_note', processNoteHandler)
 
 export default router
+
+

@@ -10,10 +10,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['zenith-logo.png', 'zenith-logo.png', 'favicon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['Semester-logo.png', 'favicon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
-        name: 'Zenith',
-        short_name: 'Zenith',
+        name: 'Semester',
+        short_name: 'Semester',
         description: 'Smart Attendance Tracker',
         theme_color: '#000000',
         background_color: '#000000',

@@ -7,43 +7,43 @@
 
 @layer base {
   :root {
-    /* --- LIGHT MODE (Yin - Crisp White Geist Theme) --- */
-    --md-sys-color-primary: #000000;
+    /* --- LIGHT MODE (Industry Standard) --- */
+    --md-sys-color-primary: #0f172a;
     --md-sys-color-on-primary: #ffffff;
-    --md-sys-color-primary-container: #fafafa;
-    --md-sys-color-on-primary-container: #000000;
+    --md-sys-color-primary-container: #f1f5f9;
+    --md-sys-color-on-primary-container: #0f172a;
 
-    --md-sys-color-secondary: #666666;
+    --md-sys-color-secondary: #475569;
     --md-sys-color-on-secondary: #ffffff;
-    --md-sys-color-secondary-container: #eaeaea;
-    --md-sys-color-on-secondary-container: #000000;
+    --md-sys-color-secondary-container: #e2e8f0;
+    --md-sys-color-on-secondary-container: #0f172a;
 
-    --md-sys-color-tertiary: #888888;
+    --md-sys-color-tertiary: #64748b;
     --md-sys-color-on-tertiary: #ffffff;
-    --md-sys-color-tertiary-container: #fafafa;
-    --md-sys-color-on-tertiary-container: #000000;
+    --md-sys-color-tertiary-container: #f1f5f9;
+    --md-sys-color-on-tertiary-container: #0f172a;
 
-    --md-sys-color-error: #ff0000;
+    --md-sys-color-error: #ef4444;
     --md-sys-color-on-error: #ffffff;
     --md-sys-color-error-container: #fee2e2;
     --md-sys-color-on-error-container: #7f1d1d;
 
-    --md-sys-color-background: #ffffff; /* Stark White */
-    --md-sys-color-on-background: #000000; /* Deep Black */
+    --md-sys-color-background: #f8fafc;
+    --md-sys-color-on-background: #0f172a;
 
     --md-sys-color-surface: #ffffff;
-    --md-sys-color-on-surface: #000000;
-    --md-sys-color-surface-variant: #fafafa;
-    --md-sys-color-on-surface-variant: #666666;
+    --md-sys-color-on-surface: #0f172a;
+    --md-sys-color-surface-variant: #f1f5f9;
+    --md-sys-color-on-surface-variant: #475569;
 
-    --md-sys-color-outline: #eaeaea; /* Stark 1px border */
-    --md-sys-color-outline-variant: #e5e5e5;
+    --md-sys-color-outline: #e2e8f0;
+    --md-sys-color-outline-variant: #cbd5e1;
 
-    --md-sys-color-surface-container: #fafafa;
+    --md-sys-color-surface-container: #f1f5f9;
     --md-sys-color-surface-container-low: #ffffff;
-    --md-sys-color-surface-container-high: #eaeaea;
-    --md-sys-color-surface-container-highest: #f0f0f0;
-    --md-sys-color-surface-dim: #fafafa;
+    --md-sys-color-surface-container-high: #e2e8f0;
+    --md-sys-color-surface-container-highest: #cbd5e1;
+    --md-sys-color-surface-dim: #f1f5f9;
 
     --md-sys-elevation-level-0: 0px 0px 0px 0px;
     --md-sys-elevation-level-1: 0px 0px 0px 0px;
@@ -58,42 +58,42 @@
   }
 
   .dark {
-    /* --- DARK MODE (Yang - Deep Obsidian Geist Theme) --- */
+    /* --- DARK MODE (Charcoal Standard) --- */
     --md-sys-color-primary: #ffffff;
-    --md-sys-color-on-primary: #000000;
-    --md-sys-color-primary-container: #111111;
+    --md-sys-color-on-primary: #121212;
+    --md-sys-color-primary-container: #1e1e1e;
     --md-sys-color-on-primary-container: #ffffff;
 
-    --md-sys-color-secondary: #888888;
-    --md-sys-color-on-secondary: #000000;
-    --md-sys-color-secondary-container: #333333;
+    --md-sys-color-secondary: #9e9e9e;
+    --md-sys-color-on-secondary: #121212;
+    --md-sys-color-secondary-container: #2d2d2d;
     --md-sys-color-on-secondary-container: #ffffff;
 
-    --md-sys-color-tertiary: #666666;
-    --md-sys-color-on-tertiary: #ffffff;
-    --md-sys-color-tertiary-container: #111111;
+    --md-sys-color-tertiary: #e0e0e0;
+    --md-sys-color-on-tertiary: #121212;
+    --md-sys-color-tertiary-container: #1e1e1e;
     --md-sys-color-on-tertiary-container: #ffffff;
 
-    --md-sys-color-error: #ff0000;
-    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error: #f87171;
+    --md-sys-color-on-error: #450a0a;
     --md-sys-color-error-container: #7f1d1d;
-    --md-sys-color-on-error-container: #fee2e2;
+    --md-sys-color-on-error-container: #fecaca;
 
-    --md-sys-color-background: #000000; /* Deep Obsidian Black */
+    --md-sys-color-background: #000000;
     --md-sys-color-on-background: #ffffff;
 
     --md-sys-color-surface: #0a0a0a;
     --md-sys-color-on-surface: #ffffff;
-    --md-sys-color-surface-variant: #111111;
-    --md-sys-color-on-surface-variant: #888888;
+    --md-sys-color-surface-variant: #000000;
+    --md-sys-color-on-surface-variant: #e0e0e0;
 
-    --md-sys-color-outline: #333333; /* Stark 1px border */
-    --md-sys-color-outline-variant: #222222;
+    --md-sys-color-outline: #27272a;
+    --md-sys-color-outline-variant: #3f3f46;
 
     --md-sys-color-surface-container: #0a0a0a;
     --md-sys-color-surface-container-low: #000000;
-    --md-sys-color-surface-container-high: #111111;
-    --md-sys-color-surface-container-highest: #333333;
+    --md-sys-color-surface-container-high: #141414;
+    --md-sys-color-surface-container-highest: #1f1f1f;
     --md-sys-color-surface-dim: #000000;
 
     --md-sys-elevation-level-0: 0px 0px 0px 0px;
@@ -747,7 +747,6 @@ button:not(.no-fluid),
 a:not(.no-fluid),
 [role="button"],
 .interactive-card,
-.sidebar-item,
 .bottom-nav-item,
 main {
   will-change: transform, opacity;
@@ -762,190 +761,6 @@ main {
   contain-intrinsic-size: 0 400px;
 }
 
-/* Note card HTML preview container styling */
-.note-preview-html {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-height: 4.8rem; /* approx 3 lines at line-height 1.6 */
-}
-.note-preview-html p,
-.note-preview-html ul,
-.note-preview-html ol,
-.note-preview-html li,
-.note-preview-html h1,
-.note-preview-html h2,
-.note-preview-html h3,
-.note-preview-html h4,
-.note-preview-html h5,
-.note-preview-html h6,
-.note-preview-html blockquote,
-.note-preview-html pre {
-  margin: 0;
-  padding: 0;
-  font-size: inherit;
-  font-weight: inherit;
-  line-height: inherit;
-}
-.note-preview-html p {
-  margin-bottom: 2px;
-}
-.note-preview-html ul,
-.note-preview-html ol {
-  padding-left: 1rem !important;
-  margin: 2px 0 !important;
-}
-.note-preview-html li {
-  display: list-item !important;
-  list-style-type: disc !important;
-}
-.note-preview-html ol li {
-  list-style-type: decimal !important;
-}
-.note-preview-html h1,
-.note-preview-html h2,
-.note-preview-html h3,
-.note-preview-html h4,
-.note-preview-html h5,
-.note-preview-html h6 {
-  font-weight: 700;
-  display: block;
-  margin-top: 4px;
-  margin-bottom: 2px;
-}
-.note-preview-html strong,
-.note-preview-html b {
-  font-weight: 700;
-  color: var(--md-sys-color-on-surface);
-}
-.note-preview-html em,
-.note-preview-html i {
-  font-style: italic;
-}
-.note-preview-html code {
-  font-family: monospace;
-  background-color: var(--md-sys-color-surface-container);
-  padding: 1px 3px;
-  border-radius: 3px;
-}
-.note-preview-html a {
-  color: var(--md-sys-color-primary);
-  text-decoration: underline;
-}
-
-/* Tiptap Task List and Task Items */
-.tiptap-editor .ProseMirror ul[data-type="taskList"] {
-  list-style: none !important;
-  padding-left: 0 !important;
-  margin: 0.5rem 0 !important;
-}
-
-.tiptap-editor .ProseMirror li[data-type="taskItem"] {
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 0.5rem !important;
-  margin: 0.25rem 0 !important;
-}
-
-.tiptap-editor .ProseMirror li[data-type="taskItem"] > label {
-  margin-top: 0.2rem;
-  user-select: none;
-}
-
-.tiptap-editor .ProseMirror li[data-type="taskItem"] > label input[type="checkbox"] {
-  appearance: none;
-  background-color: var(--md-sys-color-surface) !important;
-  margin: 0;
-  font: inherit;
-  color: var(--md-sys-color-primary);
-  width: 1.1em;
-  height: 1.1em;
-  border: 1px solid var(--md-sys-color-outline) !important;
-  border-radius: 4px !important;
-  display: grid;
-  place-content: center;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-}
-
-.tiptap-editor .ProseMirror li[data-type="taskItem"] > label input[type="checkbox"]::before {
-  content: "";
-  width: 0.6em;
-  height: 0.6em;
-  transform: scale(0);
-  transition: 120ms transform ease-in-out;
-  background-color: var(--md-sys-color-on-primary);
-  /* Checkmark clip-path */
-  clip-path: polygon(14% 44%, 0 58%, 38% 96%, 100% 23%, 86% 9%, 38% 68%);
-}
-
-.tiptap-editor .ProseMirror li[data-type="taskItem"] > label input[type="checkbox"]:checked {
-  background-color: var(--md-sys-color-primary) !important;
-  border-color: var(--md-sys-color-primary) !important;
-}
-
-.tiptap-editor .ProseMirror li[data-type="taskItem"] > label input[type="checkbox"]:checked::before {
-  transform: scale(1);
-}
-
-.tiptap-editor .ProseMirror li[data-type="taskItem"] > div {
-  flex: 1;
-}
-
-.tiptap-editor .ProseMirror li[data-type="taskItem"][data-checked="true"] > div {
-  text-decoration: line-through;
-  opacity: 0.5;
-}
-
-/* Previews for task lists in NoteCard */
-.note-preview-html ul[data-type="taskList"] {
-  list-style: none !important;
-  padding-left: 0 !important;
-  margin: 0.25rem 0 !important;
-}
-
-.note-preview-html li[data-type="taskItem"] {
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.35rem !important;
-  margin: 0.15rem 0 !important;
-}
-
-.note-preview-html li[data-type="taskItem"] input[type="checkbox"] {
-  appearance: none;
-  background-color: var(--md-sys-color-surface) !important;
-  margin: 0;
-  width: 0.9em;
-  height: 0.9em;
-  border: 1px solid var(--md-sys-color-outline) !important;
-  border-radius: 3px !important;
-  display: grid;
-  place-content: center;
-}
-
-.note-preview-html li[data-type="taskItem"] input[type="checkbox"]::before {
-  content: "";
-  width: 0.5em;
-  height: 0.5em;
-  transform: scale(0);
-  background-color: var(--md-sys-color-on-primary);
-  clip-path: polygon(14% 44%, 0 58%, 38% 96%, 100% 23%, 86% 9%, 38% 68%);
-}
-
-.note-preview-html li[data-type="taskItem"] input[type="checkbox"]:checked {
-  background-color: var(--md-sys-color-primary) !important;
-  border-color: var(--md-sys-color-primary) !important;
-}
-
-.note-preview-html li[data-type="taskItem"] input[type="checkbox"]:checked::before {
-  transform: scale(1);
-}
-
-.note-preview-html li[data-type="taskItem"][data-checked="true"] > div {
-  text-decoration: line-through;
-  opacity: 0.4;
-}
 
 /* Subtle Dot Grid Background Utility */
 .subtle-dot-grid {
@@ -967,13 +782,13 @@ main {
 }
 
 .glow-link:hover {
-  color: #4f46e5 !important;
-  text-shadow: 0 0 10px rgba(79, 70, 229, 0.6), 0 0 20px rgba(79, 70, 229, 0.4);
+  color: var(--md-sys-color-primary) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
 }
 
 .dark .glow-link:hover {
-  color: #a78bfa !important;
-  text-shadow: 0 0 12px rgba(167, 139, 250, 0.8), 0 0 24px rgba(167, 139, 250, 0.5);
+  color: var(--md-sys-color-primary) !important;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 50%, transparent);
 }
 
 /* Premium Card Hover Glow Accent */

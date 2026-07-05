@@ -223,7 +223,7 @@ function userResponse(user: Awaited<ReturnType<typeof prisma.user.findUniqueOrTh
     target_attendance: user.target_attendance,
     attendance_threshold: user.attendance_threshold,
     warning_threshold: user.warning_threshold,
-    phone_number: user.phone_number,
+
     created_at: user.created_at,
   }
 }
@@ -546,3 +546,4 @@ router.post('/logout', async (req, res) => {
 })
 
 export default router
+

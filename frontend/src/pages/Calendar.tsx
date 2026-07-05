@@ -24,7 +24,7 @@ const Calendar: React.FC = () => {
     const fetchToken = React.useRef(0);
 
     usePageMeta({
-        title: 'Calendar | Zenith',
+        title: 'Calendar | Semester',
         description: 'View and mark your daily attendance on a calendar. Log present, absent, or cancelled classes.',
     });
 
@@ -213,3 +213,4 @@ const Calendar: React.FC = () => {
 };
 
 export default Calendar;
+

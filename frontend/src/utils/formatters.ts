@@ -27,3 +27,4 @@ export const formatTeacherName = (name: string): string => {
     if (!name) return 'Unknown';
     return name.trim();
 };
+

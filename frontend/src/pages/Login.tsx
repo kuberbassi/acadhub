@@ -14,8 +14,8 @@ const Login: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     usePageMeta({
-        title: 'Zenith | Student Center',
-        description: 'Sign in to Zenith — your all-in-one student dashboard for IPU. Track attendance, sync results, manage timetables, and develop your skills.',
+        title: 'Semester | Student Center',
+        description: 'Sign in to Semester — your all-in-one student dashboard for IPU. Track attendance, sync results, manage timetables, and develop your skills.',
         indexable: false,
     });
 
@@ -57,7 +57,7 @@ const Login: React.FC = () => {
                         className="mb-8 flex justify-center"
                     >
                         <div className="w-24 h-24 rounded-xl overflow-hidden bg-surface-variant border border-outline shadow-sm flex items-center justify-center">
-                            <img src="/zenith-logo.png" alt="Zenith Logo" className="w-[72px] h-[72px] object-contain invert dark:invert-0" />
+                            <img src="/Semester-logo.png" alt="Semester Logo" className="w-[72px] h-[72px] object-contain invert dark:invert-0" />
                         </div>
                     </motion.div>
 
@@ -69,7 +69,7 @@ const Login: React.FC = () => {
                         className="mb-8"
                     >
                         <h1 className="text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                            Zenith
+                            Semester
                         </h1>
                         <p className="text-sm text-on-surface-variant font-semibold tracking-wide uppercase">
                             Student Portal
@@ -140,7 +140,7 @@ const Login: React.FC = () => {
             <footer className="w-full max-w-7xl px-6 z-10">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-outline">
                     <p className="text-[10px] text-on-surface-variant/40 font-medium">
-                        &copy; {getCopyrightYears(2025)} Zenith &mdash; made something cool by{' '}
+                        &copy; {getCopyrightYears(2025)} Semester &mdash; made something cool by{' '}
                         <a
                             href="https://kuberbassi.com"
                             target="_blank"
@@ -161,3 +161,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+

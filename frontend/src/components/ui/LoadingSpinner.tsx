@@ -14,31 +14,25 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     variant = 'spinner',
     skeletonClassName = 'h-24 w-full',
 }) => {
-
-    // Skeleton variant
     if (variant === 'skeleton') {
         return (
             <div className={`animate-pulse bg-surface-container-high rounded-xl ${skeletonClassName}`} />
         );
     }
 
-    // Spinner variant
     const loaderSizes = {
         sm: 20,
         md: 32,
         lg: 48,
     };
 
-    const spinner = (
-        <Loader size={loaderSizes[size]} />
-    );
+    const spinner = <Loader size={loaderSizes[size]} />;
 
     if (fullScreen) {
         return (
-            <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
-                <div className="flex flex-col items-center gap-4">
+            <div className="fixed inset-0 flex items-center justify-center bg-background/30 backdrop-blur-md z-50 animate-fade-in">
+                <div className="bg-surface/75 border border-outline/20 backdrop-blur-xl p-6 rounded-2xl shadow-2xl flex flex-col items-center justify-center gap-3">
                     {spinner}
-                    <p className="text-on-surface-variant text-sm font-medium">Loading...</p>
                 </div>
             </div>
         );

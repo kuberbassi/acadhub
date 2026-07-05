@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    LayoutDashboard, CalendarClock, Trophy, Settings,
-    GraduationCap, Target, StickyNote, Sun, Moon,
-    PieChart, CalendarDays, Beaker, LogOut
+    LayoutDashboard, CalendarClock, Settings,
+    GraduationCap, Sun, Moon,
+    CalendarDays, Beaker, LogOut
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -15,14 +15,10 @@ interface BottomNavProps {}
 
 const radialItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Notes & Todos', href: '/notes', icon: StickyNote },
-    { name: 'Analytics', href: '/analytics', icon: PieChart },
     { name: 'Schedule', href: '/timetable', icon: CalendarClock },
     { name: 'Calendar', href: '/calendar', icon: CalendarDays },
     { name: 'Courses', href: '/courses', icon: GraduationCap },
     { name: 'Assignments', href: '/practicals', icon: Beaker },
-    { name: 'Results', href: '/results', icon: Trophy },
-    { name: 'Skills', href: '/skills', icon: Target },
     { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
@@ -41,13 +37,14 @@ const BottomNav: React.FC<BottomNavProps> = () => {
 
     const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Haptic vibration on hover change
+    // Light vibration feedback when pointer hovers over menu items
     useEffect(() => {
         if (activeIdx !== null) {
             haptics.light();
         }
     }, [activeIdx]);
 
+    // Triggers when user presses the central navigation button
     const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
         e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -70,6 +67,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
     useEffect(() => {
         if (!pointerDownTime) return;
 
+        // Tracks user dragging motion to calculate highlighted menu items
         const handlePointerMove = (e: PointerEvent) => {
             if (!isHolding) return;
             const dX = e.clientX - center.x;
@@ -79,7 +77,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
             let angle = Math.atan2(-dY, dX) * 180 / Math.PI;
             if (angle < 0) angle += 360;
 
-            // Trigger selection when drag distance is sufficient
+            // Check if distance is inside the radial menu target zone
             if (distance > 30 && distance < 240) {
                 let closestIdx = 0;
                 let minDiff = Infinity;
@@ -101,6 +99,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
             }
         };
 
+        // Handles pointer release to trigger navigation or open profile drawer
         const handlePointerUp = () => {
             if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
             
@@ -129,19 +128,19 @@ const BottomNav: React.FC<BottomNavProps> = () => {
         };
     }, [pointerDownTime, isHolding, center, activeIdx, lastTap, navigate]);
 
-    // Center button icon determination
+    // Determines which icon to display at the center of the bubble button
     const getCenterIcon = () => {
         if (activeIdx !== null) {
             return { type: 'icon', element: radialItems[activeIdx].icon, key: `hovered-${activeIdx}` };
         }
         if (isHolding) {
-            return { type: 'logo', element: '/zenith-logo.png', key: 'logo' };
+            return { type: 'logo', element: '/Semester-logo.png', key: 'logo' };
         }
         const currentItem = radialItems.find(item => item.href === location.pathname);
         if (currentItem) {
             return { type: 'icon', element: currentItem.icon, key: `current-${location.pathname}` };
         }
-        return { type: 'logo', element: '/zenith-logo.png', key: 'logo' };
+        return { type: 'logo', element: '/Semester-logo.png', key: 'logo' };
     };
 
     const centerIconInfo = getCenterIcon();
@@ -185,8 +184,8 @@ const BottomNav: React.FC<BottomNavProps> = () => {
                 </svg>
             )}
 
-            {/* Floating Fingerprint Radial Nav Button (Mobile Only) */}
-            <div className="lg:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-[999]">
+            {/* Floating Fingerprint Radial Nav Button (Mobile & Desktop) */}
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999]">
                 <button
                     onPointerDown={handlePointerDown}
                     className={`w-14 h-14 rounded-full flex items-center justify-center border transition-all select-none cursor-pointer touch-none ${
@@ -207,7 +206,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
                                 exit={{ scale: 0.7, opacity: 0, rotate: 30 }}
                                 transition={{ duration: 0.12 }}
                                 src={centerIconInfo.element as string}
-                                alt="Zenith"
+                                alt="Semester"
                                 className={`w-6.5 h-6.5 object-contain ${
                                     isHolding 
                                         ? (theme === 'dark' ? 'invert' : 'invert-0') 
@@ -237,7 +236,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
             {/* Radial Menu Fan overlay */}
             <AnimatePresence>
                 {isHolding && (
-                    <div className="lg:hidden fixed inset-0 z-[998] pointer-events-none select-none bg-black/15 backdrop-blur-[2px]">
+                    <div className="fixed inset-0 z-[998] pointer-events-none select-none bg-black/15 backdrop-blur-[2px]">
                         <div 
                             className="absolute rounded-full bg-primary/5 border border-primary/20 pointer-events-none animate-pulse"
                             style={{
@@ -300,7 +299,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="lg:hidden fixed inset-0 bg-black/60 z-[9998] backdrop-blur-sm"
+                            className="fixed inset-0 bg-black/60 z-[9998] backdrop-blur-sm"
                             onClick={() => setProfileOpen(false)}
                         />
 
@@ -309,7 +308,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-                            className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-outline/60 rounded-t-xl z-[9999] max-h-[60vh] overflow-y-auto text-on-surface p-6 shadow-2xl"
+                            className="fixed bottom-0 left-0 right-0 md:max-w-md md:mx-auto bg-surface border-t border-outline/60 rounded-t-xl z-[9999] max-h-[60vh] overflow-y-auto text-on-surface p-6 shadow-2xl"
                         >
                             <div className="w-12 h-1 bg-outline-variant/30 rounded-full mx-auto mb-6" />
 
@@ -381,4 +380,5 @@ const BottomNav: React.FC<BottomNavProps> = () => {
 };
 
 export default BottomNav;
+
 

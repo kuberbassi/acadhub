@@ -46,7 +46,7 @@ export function getSafeProfileUpdate(profile: any) {
   const allowedProfileFields = [
     'name', 'course', 'branch', 'college', 'batch', 'current_semester',
     'enrollment_number', 'target_attendance', 'attendance_threshold', 'warning_threshold',
-    'phone_number', 'admission_year', 'mother_name', 'father_name', 'gender', 'biometrics', 'picture',
+    'admission_year', 'biometrics', 'picture',
   ]
 
   const filteredProfile = Object.fromEntries(
@@ -294,3 +294,4 @@ export async function restoreUserData(userId: string, rawData: UserData) {
     }
   }
 }
+

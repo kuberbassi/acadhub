@@ -238,10 +238,10 @@ router.delete('/delete_all_data', async (req: AuthRequest, res) => {
         college: null,
         batch: null,
         enrollment_number: null,
-        mother_name: null,
-        father_name: null,
-        gender: null,
-        phone_number: null,
+
+
+
+
         admission_year: null,
         current_semester: 1,
         target_attendance: 75,
@@ -430,7 +430,7 @@ router.post('/migration/complete', async (req: AuthRequest, res) => {
     const updateData: Record<string, any> = {}
     const fields = [
       'branch', 'course', 'college', 'batch', 'enrollment_number',
-      'mother_name', 'father_name', 'gender', 'phone_number', 'admission_year',
+      'admission_year',
       'current_semester', 'target_attendance', 'attendance_threshold', 'warning_threshold',
       'biometrics', 'picture'
     ]
@@ -608,3 +608,5 @@ router.post('/drive/disconnect', async (req: AuthRequest, res) => {
 })
 
 export default router
+
+

@@ -32,8 +32,8 @@ const Settings: React.FC = () => {
     const { showToast } = useToast();
 
     usePageMeta({
-        title: 'Settings | Zenith',
-        description: 'Manage your Zenith profile, preferences, semester settings, and account data.',
+        title: 'Settings | Semester',
+        description: 'Manage your Semester profile, preferences, semester settings, and account data.',
     });
 
     const [activeTab, setActiveTab] = useState<TabKey>('profile');
@@ -45,7 +45,7 @@ const Settings: React.FC = () => {
     const [profileForm, setProfileForm] = useState({
         course: '', branch: '', college: '', semester: 1, batch: '', picture: '', enrollment_number: '',
         attendance_threshold: 75, warning_threshold: 76,
-        phone_number: ''
+        
     });
 
     useEffect(() => {
@@ -56,7 +56,7 @@ const Settings: React.FC = () => {
                 picture: user.picture || '', enrollment_number: user.enrollment_number || '',
                 attendance_threshold: user.attendance_threshold || 75,
                 warning_threshold: user.warning_threshold || 76,
-                phone_number: user.phone_number || ''
+                
             });
             setName(user.name);
         }
@@ -180,7 +180,7 @@ const Settings: React.FC = () => {
                     </div>
                     <button
                         onClick={toggleTheme}
-                        className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg border border-outline bg-surface text-on-surface hover:bg-surface-container transition-all cursor-pointer shadow-sm"
+                        className="flex items-center justify-center w-9 h-9 rounded-lg border border-outline bg-surface text-on-surface hover:bg-surface-container transition-all cursor-pointer shadow-sm"
                         title="Toggle Theme"
                     >
                         {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
@@ -316,15 +316,9 @@ const Settings: React.FC = () => {
                                         <input value={profileForm.enrollment_number} onChange={e => setProfileForm({ ...profileForm, enrollment_number: e.target.value })} disabled={!isEditingProfile} className={inputCls} placeholder="00000000000" />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[11px] font-medium text-on-surface-variant/50 mb-1.5">College</label>
-                                        <input value={profileForm.college} onChange={e => setProfileForm({ ...profileForm, college: e.target.value })} disabled={!isEditingProfile} className={inputCls} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[11px] font-medium text-on-surface-variant/50 mb-1.5">Phone</label>
-                                        <input value={profileForm.phone_number} onChange={e => setProfileForm({ ...profileForm, phone_number: e.target.value })} disabled={!isEditingProfile} className={inputCls} placeholder="+91 0000000000" />
-                                    </div>
+                                <div>
+                                    <label className="block text-[11px] font-medium text-on-surface-variant/50 mb-1.5">College</label>
+                                    <input value={profileForm.college} onChange={e => setProfileForm({ ...profileForm, college: e.target.value })} disabled={!isEditingProfile} className={inputCls} />
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div>
@@ -399,3 +393,4 @@ const Settings: React.FC = () => {
 };
 
 export default Settings;
+

@@ -2,7 +2,7 @@ export const calculatePercent = (attended: number, total: number): number => {
     return total > 0 ? Math.round((attended / total) * 100 * 10) / 10 : 0;
 };
 
-export interface ZenithResult {
+export interface SemesterResult {
     status: 'safe' | 'danger' | 'neutral';
     statusMessage: string;
     percentage: number;
@@ -10,11 +10,11 @@ export interface ZenithResult {
     classesToAttend?: number;
 }
 
-export const calculateZenith = (
+export const calculateSemester = (
     attended: number,
     total: number,
     requiredPercent: number = 75
-): ZenithResult => {
+): SemesterResult => {
     const requiredPercentDecimal = requiredPercent / 100;
 
     if (total === 0) {
@@ -58,3 +58,4 @@ export const calculateZenith = (
         };
     }
 };
+

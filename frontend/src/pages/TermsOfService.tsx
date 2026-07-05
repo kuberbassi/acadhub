@@ -8,12 +8,12 @@ const sections = [
     {
         icon: FileText,
         title: 'Acceptance of Terms',
-        content: 'By accessing and using Zenith, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to these terms, please do not use this application.'
+        content: 'By accessing and using Semester, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to these terms, please do not use this application.'
     },
     {
         icon: UserCheck,
         title: 'Description of Service',
-        content: 'Zenith provides an academic management dashboard that integrates with your Google account to track attendance, assignments, and tasks. You understand and agree that the Service is provided "AS-IS" and we make no warranties regarding its availability, accuracy, or reliability.'
+        content: 'Semester provides an academic management dashboard that integrates with your Google account to track attendance, assignments, and schedules. You understand and agree that the Service is provided "AS-IS" and we make no warranties regarding its availability, accuracy, or reliability.'
     },
     {
         icon: AlertTriangle,
@@ -47,8 +47,8 @@ const TermsOfService: React.FC = () => {
     const navigate = useNavigate();
 
     usePageMeta({
-        title: 'Terms of Service | Zenith',
-        description: 'Read the Zenith terms of service. Understand your rights and responsibilities as a user.',
+        title: 'Terms of Service | Semester',
+        description: 'Read the Semester terms of service. Understand your rights and responsibilities as a user.',
         indexable: false,
     });
 
@@ -110,7 +110,7 @@ const TermsOfService: React.FC = () => {
                 {/* Disclaimer */}
                 <div className="rounded-xl bg-amber-500/[0.02] dark:bg-amber-500/[0.04] border border-amber-500/15 p-6 text-center select-none">
                     <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 leading-relaxed">
-                        By using Zenith, you acknowledge that you have read, understood, and agree to these Terms of Service.
+                        By using Semester, you acknowledge that you have read, understood, and agree to these Terms of Service.
                     </p>
                 </div>
             </div>
@@ -119,3 +119,4 @@ const TermsOfService: React.FC = () => {
 };
 
 export default TermsOfService;
+

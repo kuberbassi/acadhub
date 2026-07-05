@@ -13,7 +13,7 @@ import { useConfirm } from '@/contexts/ConfirmContext';
 interface Course {
     _id?: string;
     title: string;
-    platform: 'coursera' | 'udemy' | 'youtube' | 'edx' | 'linkedin' | 'college' | 'custom';
+    platform: 'coursera' | 'udemy' | 'youtube' | 'codedex' | 'linkedin' | 'college' | 'custom';
     url: string;
     progress: number;
     enrolledDate: string;
@@ -103,7 +103,7 @@ const PLATFORMS = [
     { value: 'coursera', label: 'Coursera', icon: Globe },
     { value: 'udemy', label: 'Udemy', icon: Video },
     { value: 'youtube', label: 'YouTube', icon: Video },
-    { value: 'edx', label: 'edX', icon: Globe },
+    { value: 'codedex', label: 'Codédex', icon: Globe },
     { value: 'linkedin', label: 'LinkedIn', icon: Globe },
     { value: 'college', label: 'College', icon: Book },
     { value: 'custom', label: 'Custom', icon: Globe },
@@ -123,7 +123,7 @@ const Courses: React.FC = () => {
     });
 
     usePageMeta({
-        title: 'Courses | Zenith',
+        title: 'Courses | Semester',
         description: 'Track your enrolled courses, progress, and learning milestones all in one place.',
     });
 
@@ -359,3 +359,4 @@ const Courses: React.FC = () => {
 };
 
 export default Courses;
+

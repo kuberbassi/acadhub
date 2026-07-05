@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './queryClient';
@@ -23,23 +23,18 @@ import { useHaptics } from './hooks/useHaptics';
 import AppLayout from './components/layout/AppLayout';
 import PageTransition from './components/ui/PageTransition';
 
-// Lazy Load All Pages for optimal code splitting
-const Landing     = lazy(() => import('./pages/Landing'));
-const Login       = lazy(() => import('./pages/Login'));
-const Dashboard   = lazy(() => import('./pages/Dashboard'));
-const Settings    = lazy(() => import('./pages/Settings'));
-const Analytics   = lazy(() => import('./pages/Analytics.tsx'));
-const Calendar    = lazy(() => import('./pages/Calendar.tsx'));
-const TimeTable   = lazy(() => import('./pages/TimeTable.tsx'));
-const Courses     = lazy(() => import('./pages/Courses.tsx'));
-const Practicals  = lazy(() => import('./pages/Practicals.tsx'));
-const Notes       = lazy(() => import('./pages/Notes.tsx'));
-const Results     = lazy(() => import('./pages/Results.tsx'));
-const PrivacyPolicy  = lazy(() => import('./pages/PrivacyPolicy.tsx'));
-const TermsOfService = lazy(() => import('./pages/TermsOfService.tsx'));
-const NotFound       = lazy(() => import('./pages/NotFound.tsx'));
-const SkillTracker   = lazy(() => import('./pages/SkillTracker.tsx'));
-const Notifications  = lazy(() => import('./pages/Notifications.tsx'));
+// Pages - Static Imports for instant, lag-free navigation without loading screens
+import Landing from './pages/Landing';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
+import Calendar from './pages/Calendar';
+import TimeTable from './pages/TimeTable';
+import Courses from './pages/Courses';
+import Practicals from './pages/Practicals';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import NotFound from './pages/NotFound';
 
 // ── Route Guards ─────────────────────────────────────────────────────────────
 
@@ -55,9 +50,6 @@ const PublicRoute: React.FC<{ children: React.ReactElement }> = ({ children }) =
   return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
 };
 
-// Suspense fallback used for every lazily-loaded page
-const PageFallback = <LoadingSpinner fullScreen />;
-
 // ── Main App Routes ───────────────────────────────────────────────────────────
 
 const AppRoutes: React.FC = () => {
@@ -68,22 +60,18 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/"
         element={
-          <Suspense fallback={PageFallback}>
-            <PageTransition>
-              <Landing />
-            </PageTransition>
-          </Suspense>
+          <PageTransition>
+            <Landing />
+          </PageTransition>
         }
       />
       <Route
         path="/login"
         element={
           <PublicRoute>
-            <Suspense fallback={PageFallback}>
-              <PageTransition>
-                <Login />
-              </PageTransition>
-            </Suspense>
+            <PageTransition>
+              <Login />
+            </PageTransition>
           </PublicRoute>
         }
       />
@@ -92,21 +80,17 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/privacy"
         element={
-          <Suspense fallback={PageFallback}>
-            <PageTransition>
-              <PrivacyPolicy />
-            </PageTransition>
-          </Suspense>
+          <PageTransition>
+            <PrivacyPolicy />
+          </PageTransition>
         }
       />
       <Route
         path="/terms"
         element={
-          <Suspense fallback={PageFallback}>
-            <PageTransition>
-              <TermsOfService />
-            </PageTransition>
-          </Suspense>
+          <PageTransition>
+            <TermsOfService />
+          </PageTransition>
         }
       />
 
@@ -114,11 +98,9 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/404"
         element={
-          <Suspense fallback={PageFallback}>
-            <PageTransition>
-              <NotFound />
-            </PageTransition>
-          </Suspense>
+          <PageTransition>
+            <NotFound />
+          </PageTransition>
         }
       />
 
@@ -128,29 +110,16 @@ const AppRoutes: React.FC = () => {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Dashboard />
-              </Suspense>
+              <Dashboard />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/analytics"
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Analytics />
-              </Suspense>
-            </ProtectedRoute>
-          }
-        />
+
         <Route
           path="/timetable"
           element={
             <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <TimeTable />
-              </Suspense>
+              <TimeTable />
             </ProtectedRoute>
           }
         />
@@ -158,9 +127,7 @@ const AppRoutes: React.FC = () => {
           path="/calendar"
           element={
             <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Calendar />
-              </Suspense>
+              <Calendar />
             </ProtectedRoute>
           }
         />
@@ -168,9 +135,7 @@ const AppRoutes: React.FC = () => {
           path="/courses"
           element={
             <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Courses />
-              </Suspense>
+              <Courses />
             </ProtectedRoute>
           }
         />
@@ -178,9 +143,7 @@ const AppRoutes: React.FC = () => {
           path="/practicals"
           element={
             <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Practicals />
-              </Suspense>
+              <Practicals />
             </ProtectedRoute>
           }
         />
@@ -188,63 +151,20 @@ const AppRoutes: React.FC = () => {
           path="/settings"
           element={
             <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Settings />
-              </Suspense>
+              <Settings />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/notes"
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Notes />
-              </Suspense>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/results"
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Results />
-              </Suspense>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/skills"
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <SkillTracker />
-              </Suspense>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/notifications"
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={PageFallback}>
-                <Notifications />
-              </Suspense>
-            </ProtectedRoute>
-          }
-        />
+
       </Route>
 
       {/* ── Catch-all → 404 ────────────────────────────────── */}
       <Route
         path="*"
         element={
-          <Suspense fallback={PageFallback}>
-            <PageTransition>
-              <NotFound />
-            </PageTransition>
-          </Suspense>
+          <PageTransition>
+            <NotFound />
+          </PageTransition>
         }
       />
 
@@ -308,3 +228,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

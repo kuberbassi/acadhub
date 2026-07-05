@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useDashboard, useMarkAttendance } from '@/hooks/useDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Trash2, Edit2, Check, X,
-    Activity, Target, Flame, ChevronRight, Settings as SettingsIcon, FileText,
-    CheckCircle2, Circle
+    Activity, Target, Flame, ChevronRight, Settings as SettingsIcon
 } from 'lucide-react';
 import AddSubjectModal from '@/components/modals/AddSubjectModal';
 import EditSubjectModal from '@/components/modals/EditSubjectModal';
@@ -17,10 +16,7 @@ import useLongPress from '@/hooks/useLongPress';
 import { useSemester } from '@/contexts/SemesterContext';
 import { Link } from 'react-router-dom';
 import { formatTeacherName } from '@/utils/formatters';
-import { useNotes } from '@/hooks/useNotes';
-import { useQueryClient } from '@tanstack/react-query';
 import { useConfirm } from '@/contexts/ConfirmContext';
-import api from '@/services/api';
 
 /* ── Helpers for Timetable slot subject mapping ── */
 const normalizeId = (value: unknown) => (value === null || value === undefined ? '' : String(value).trim());
@@ -187,7 +183,7 @@ const Dashboard: React.FC = () => {
     const markAttendanceMutation = useMarkAttendance();
 
     usePageMeta({
-        title: 'Dashboard | Zenith',
+        title: 'Dashboard | Semester',
         description: 'Your academic overview — attendance, upcoming classes, and performance at a glance.',
     });
 
@@ -201,58 +197,12 @@ const Dashboard: React.FC = () => {
     } | null>(null);
 
     const [todayClasses, setTodayClasses] = useState<any[]>([]);
-    const queryClient = useQueryClient();
     const confirm = useConfirm();
 
     const [categoryFilter, setCategoryFilter] = useState<'Theory' | 'Practical' | 'All'>(() => {
-        const saved = localStorage.getItem('zenith_dashboard_subject_filter');
+        const saved = localStorage.getItem('semester_dashboard_subject_filter');
         return (saved === 'Theory' || saved === 'Practical' || saved === 'All') ? saved : 'All';
     });
-    const [notesFilter, setNotesFilter] = useState<'all' | 'notes' | 'todos'>(() => {
-        const saved = localStorage.getItem('zenith_dashboard_notes_filter');
-        return (saved === 'all' || saved === 'notes' || saved === 'todos') ? saved : 'all';
-    });
-
-    const { data: notesList, refetch: refetchNotes } = useNotes();
-
-    const filteredNotesPreview = useMemo(() => {
-        const list = notesList || [];
-        if (notesFilter === 'all') return list;
-        if (notesFilter === 'notes') return list.filter(n => !n.is_todo);
-        return list.filter(n => n.is_todo);
-    }, [notesList, notesFilter]);
-
-    const handleToggleTodoInDashboard = async (note: any, todoId: string) => {
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-            navigator.vibrate(10);
-        }
-        const previousNotes = queryClient.getQueryData<any[]>(['notes']);
-        if (previousNotes) {
-            const updated = previousNotes.map(n => {
-                if (n.id === note.id) {
-                    return {
-                        ...n,
-                        todos: n.todos.map((t: any) => t.id === todoId ? { ...t, completed: !t.completed } : t)
-                    };
-                }
-                return n;
-            });
-            queryClient.setQueryData(['notes'], updated);
-        }
-        try {
-            const updatedTodos = note.todos.map((t: any) => t.id === todoId ? { ...t, completed: !t.completed } : t);
-            await api.put(`/api/notes/${note.id}`, { todos: updatedTodos });
-            queryClient.invalidateQueries({ queryKey: ['notes'] });
-            refetchNotes();
-        } catch (err) {
-            console.error("Failed to toggle todo status", err);
-            showToast('error', 'Failed to update task');
-            if (previousNotes) {
-                queryClient.setQueryData(['notes'], previousNotes);
-            }
-        }
-    };
-
     const targetThreshold = user?.attendance_threshold || 75;
 
     useEffect(() => {
@@ -382,8 +332,8 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3 self-start sm:self-auto">
-                    {/* Mobile-only Semester Selector */}
-                    <div ref={semRef} className="lg:hidden block relative z-20">
+                    {/* Semester Selector */}
+                    <div ref={semRef} className="relative z-20">
                         <button
                             onClick={() => setSemDropOpen(!semDropOpen)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline bg-surface hover:bg-surface-container-high transition-colors text-xs font-semibold text-on-surface-variant hover:text-on-surface whitespace-nowrap cursor-pointer"
@@ -437,23 +387,23 @@ const Dashboard: React.FC = () => {
                 </div>
             ) : (
                 <div className="space-y-6">
-                               {/* Bento Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Bento Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         
                         {/* Bento Card 1: Academic Health */}
-                        <div className="rounded-xl border border-outline/50 bg-surface p-6 sm:p-7 flex flex-col justify-between hover:border-on-surface/20 transition-all lg:col-span-2 shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
                             <div className="flex items-center justify-between mb-6">
                                 <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Overall Academic Health</span>
                                 <Activity size={13} className="text-on-surface-variant/40" />
                             </div>
                             
-                            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 my-2">
+                            <div className="flex flex-col justify-between gap-6 my-2">
                                 <div>
-                                    <p className="text-6xl md:text-8xl font-black tracking-tighter text-on-surface leading-none">{att.toFixed(1)}%</p>
+                                    <p className="text-5xl md:text-6xl font-black tracking-tighter text-on-surface leading-none">{att.toFixed(1)}%</p>
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/40 mt-3">Overall Conducted Classes</p>
                                 </div>
                                 
-                                <div className="flex-1 w-full md:max-w-xs space-y-4">
+                                <div className="w-full space-y-4">
                                     <div>
                                         <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/50 mb-2">
                                             <span>Conduct Progress</span>
@@ -483,7 +433,7 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         {/* Bento Card 2: Student Target */}
-                        <div className="rounded-xl border border-outline/50 bg-surface p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
                             <div>
                                 <div className="flex items-center justify-between mb-6">
                                     <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Academic Target</span>
@@ -521,7 +471,7 @@ const Dashboard: React.FC = () => {
                             <div className="border-t border-outline/40 pt-4 mt-6">
                                 <Link
                                     to="/settings"
-                                    className="w-full h-8.5 flex items-center justify-center gap-2 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
+                                    className="w-full h-10.5 flex items-center justify-center gap-2 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-sm"
                                 >
                                     <SettingsIcon size={12} />
                                     Configure Settings
@@ -530,7 +480,7 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         {/* Bento Card 3: Today's Schedule */}
-                        <div className="rounded-xl border border-outline/50 bg-surface p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all min-h-[260px] shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
                             <div>
                                 <div className="flex items-center justify-between mb-6">
                                     <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Today's Schedule</span>
@@ -563,7 +513,7 @@ const Dashboard: React.FC = () => {
                             <div className="border-t border-outline/40 pt-4 mt-6 shrink-0">
                                 <Link
                                     to="/timetable"
-                                    className="w-full h-8.5 flex items-center justify-center gap-1 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
+                                    className="w-full h-10.5 flex items-center justify-center gap-1 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-sm"
                                 >
                                     View Full Timetable
                                     <ChevronRight size={12} />
@@ -571,107 +521,9 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Bento Card 4: Recent Notes */}
-                        <div className="rounded-xl border border-outline/50 bg-surface p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all min-h-[280px] lg:col-span-2 shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
-                            <div>
-                                <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Recent Notes & Checklists</span>
-                                        <FileText size={13} className="text-on-surface-variant/40" />
-                                    </div>
-                                    <div className="flex items-center gap-1 p-0.5 bg-surface-container border border-outline/50 rounded-md">
-                                        {(['all', 'notes', 'todos'] as const).map(filter => (
-                                            <button
-                                                key={filter}
-                                                onClick={() => {
-                                                    setNotesFilter(filter);
-                                                    localStorage.setItem('zenith_dashboard_notes_filter', filter);
-                                                }}
-                                                className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                                                    notesFilter === filter
-                                                        ? 'bg-on-surface text-surface'
-                                                        : 'text-on-surface-variant/50 hover:text-on-surface'
-                                                }`}
-                                            >
-                                                {filter === 'all' ? 'All' : filter === 'notes' ? 'Notes' : 'Tasks'}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-2">
-                                    {filteredNotesPreview.length > 0 ? (
-                                        filteredNotesPreview.slice(0, 2).map((note, idx) => (
-                                            <div key={note.id || idx} className="border border-outline/40 bg-surface-container/20 rounded-lg p-4 flex flex-col justify-between min-h-[140px] hover:border-on-surface/20 hover:bg-surface-container/30 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
-                                                <div>
-                                                    <Link to="/notes" className="hover:underline cursor-pointer block">
-                                                        <h4 className="text-xs font-bold text-on-surface truncate">{note.title || 'Untitled'}</h4>
-                                                    </Link>
-                                                    {!note.is_todo ? (
-                                                        <Link to="/notes" className="cursor-pointer block mt-1.5 select-none pointer-events-none">
-                                                            <div
-                                                                className="text-xs text-on-surface-variant/60 line-clamp-3 leading-relaxed note-preview-html"
-                                                                dangerouslySetInnerHTML={{
-                                                                    __html: (note.content || '')
-                                                                        .replace(/<img[^>]*>/gi, '<span class="text-primary font-bold text-[9px] bg-primary/10 px-1 rounded uppercase tracking-wider">[Image]</span> ')
-                                                                        .replace(/<iframe[^>]*>/gi, '<span class="text-primary font-bold text-[9px] bg-primary/10 px-1 rounded uppercase tracking-wider">[Video]</span> ')
-                                                                }}
-                                                            />
-                                                        </Link>
-                                                    ) : (
-                                                        <div className="space-y-1.5 mt-2.5">
-                                                            {note.todos && note.todos.slice(0, 3).map((todo: any) => (
-                                                                <button
-                                                                    key={todo.id}
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                        void handleToggleTodoInDashboard(note, todo.id);
-                                                                    }}
-                                                                    className="flex items-center gap-2 text-[11px] text-left w-full hover:bg-surface-container/80 p-1 rounded-md transition-colors group/todo cursor-pointer"
-                                                                >
-                                                                    <span className={`shrink-0 transition-colors ${todo.completed ? 'text-primary' : 'text-on-surface-variant/30 group-hover/todo:text-on-surface-variant/70'}`}>
-                                                                        {todo.completed ? (
-                                                                            <CheckCircle2 size={14} className="fill-primary/10" />
-                                                                        ) : (
-                                                                            <Circle size={14} />
-                                                                        )}
-                                                                    </span>
-                                                                    <span className={`truncate leading-none ${todo.completed ? 'line-through text-on-surface-variant/30' : 'text-on-surface'}`}>
-                                                                        {todo.text}
-                                                                    </span>
-                                                                </button>
-                                                            ))}
-                                                            {note.todos && note.todos.length > 3 && (
-                                                                <p className="text-[9px] font-bold text-on-surface-variant/30 ml-6 uppercase">+{note.todos.length - 3} more tasks</p>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <span className="text-[8px] font-bold uppercase tracking-wider text-on-surface-variant/30 mt-3 block">{note.is_todo ? 'Checklist' : 'Note'}</span>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="py-8 text-center border border-dashed border-outline/50 rounded-lg col-span-2">
-                                            <p className="text-xs font-semibold text-on-surface-variant/30 italic">No items match the filter.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="border-t border-outline/40 pt-4 mt-6">
-                                <Link
-                                    to="/notes"
-                                    className="w-full h-8.5 flex items-center justify-center gap-1 border border-outline hover:border-on-surface/20 hover:bg-surface-container rounded-md text-xs font-semibold text-on-surface transition-all cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
-                                >
-                                    Open Notes &amp; Todos
-                                    <ChevronRight size={12} />
-                                </Link>
-                            </div>
-                        </div>
 
                         {/* Bento Card 5: Courses Breakdown */}
-                        <div className="rounded-xl border border-outline/50 bg-surface overflow-hidden lg:col-span-3 hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+                        <div className="rounded-xl border border-outline/50 bg-surface overflow-hidden lg:col-span-3 hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)] mt-2">
                             <div className="px-6 py-5 border-b border-outline/30 bg-surface-container/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Courses Breakdown</span>
                                 {/* Category filter tabs */}
@@ -691,7 +543,7 @@ const Dashboard: React.FC = () => {
                                                 key={cat}
                                                 onClick={() => {
                                                     setCategoryFilter(cat);
-                                                    localStorage.setItem('zenith_dashboard_subject_filter', cat);
+                                                    localStorage.setItem('semester_dashboard_subject_filter', cat);
                                                 }}
                                                 className={`flex items-center gap-1.5 px-3 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
                                                     categoryFilter === cat
@@ -825,3 +677,6 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+
+
+

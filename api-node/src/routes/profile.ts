@@ -28,7 +28,7 @@ const ProfileUpdateSchema = z.object({
   attendance_threshold: z.number().min(0).max(100).optional(),
   warning_threshold: z.number().min(0).max(100).optional(),
   enrollment_number: z.string().max(50).optional(),
-  phone_number: z.string().max(20).optional(),
+
 }).strict()
 
 const ProfilePostSchema = z.object({
@@ -42,7 +42,7 @@ const ProfilePostSchema = z.object({
   attendance_threshold: z.number().min(0).max(100).optional(),
   warning_threshold: z.number().min(0).max(100).optional(),
   target_attendance: z.number().min(0).max(100).optional(),
-  phone_number: z.string().max(20).optional(),
+
 }).strict()
 
 const DeleteAccountSchema = z.object({
@@ -362,3 +362,4 @@ router.delete('/account', async (req: AuthRequest, res) => {
 })
 
 export default router
+

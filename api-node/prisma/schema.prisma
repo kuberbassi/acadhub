@@ -42,10 +42,6 @@ model User {
   college              String?
   batch                String?
   enrollment_number    String?
-  mother_name          String?
-  father_name          String?
-  gender               String?
-  phone_number         String?
   admission_year       String?
 
   current_semester     Int      @default(1)

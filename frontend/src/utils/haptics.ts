@@ -92,3 +92,4 @@ export const haptics = {
         triggerHaptic([40, 60, 40], 500);
     }
 };
+

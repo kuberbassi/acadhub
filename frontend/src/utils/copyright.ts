@@ -17,3 +17,4 @@ export function getCopyrightYears(foundingYear = 2025): string {
     const suffix = String(now).slice(-2);
     return `${foundingYear}–${suffix}`;
 }
+

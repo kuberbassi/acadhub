@@ -52,7 +52,7 @@ const Practicals: React.FC = () => {
     const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
 
     usePageMeta({
-        title: 'Assignments & Practicals | Zenith',
+        title: 'Assignments & Practicals | Semester',
         description: 'Track practical records and assignment milestones across all your subjects.',
     });
 
@@ -202,7 +202,7 @@ const Practicals: React.FC = () => {
                                                         })}
                                                     </div>
                                                 </div>
-                                                <button onClick={() => setEditingSubject(subject)} className="w-7 h-7 rounded-md border border-outline/50 bg-surface flex items-center justify-center text-on-surface-variant/30 hover:text-on-surface hover:bg-surface-container transition-all cursor-pointer flex-shrink-0 ml-2 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
+                                                <button onClick={() => setEditingSubject(subject)} className="w-7 h-7 rounded-md border border-outline/50 bg-surface flex items-center justify-center text-on-surface-variant/70 hover:text-on-surface hover:bg-surface-container transition-all cursor-pointer flex-shrink-0 ml-2 shadow-sm">
                                                     <Edit2 size={11} />
                                                 </button>
                                             </div>
@@ -215,14 +215,14 @@ const Practicals: React.FC = () => {
                                                             <span className="text-xs font-bold text-on-surface font-mono">{p.completed}/{p.total}</span>
                                                         </div>
                                                         <div className="flex gap-2">
-                                                            <button disabled={p.completed <= 0} onClick={() => handleUpdate(subject._id, { completed: p.completed - 1 })} className="flex-1 h-7 rounded-md border border-outline/50 text-on-surface-variant hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
+                                                            <button disabled={p.completed <= 0} onClick={() => handleUpdate(subject._id, { completed: p.completed - 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
                                                                 <Minus size={11} />
                                                             </button>
-                                                            <button disabled={p.completed >= p.total} onClick={() => handleUpdate(subject._id, { completed: p.completed + 1 })} className="flex-1 h-7 rounded-md border border-outline/50 text-on-surface-variant hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
+                                                            <button disabled={p.completed >= p.total} onClick={() => handleUpdate(subject._id, { completed: p.completed + 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
                                                                 <Plus size={11} />
                                                             </button>
                                                         </div>
-                                                        <button onClick={() => handleUpdate(subject._id, { hardcopy: !p.hardcopy })} className={`w-full py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${p.hardcopy ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/30 font-bold' : 'border border-dashed border-outline/40 text-on-surface-variant/40 hover:border-outline/80 hover:text-on-surface-variant'}`}>
+                                                        <button onClick={() => handleUpdate(subject._id, { hardcopy: !p.hardcopy })} className={`w-full py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${p.hardcopy ? 'bg-emerald-100 border border-emerald-300 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 font-bold' : 'bg-surface-container/30 border border-outline text-on-surface-variant/60 hover:border-outline-variant hover:text-on-surface hover:bg-surface-container'}`}>
                                                             {p.hardcopy ? <><CheckCircle size={11} /> Submitted</> : <><Target size={11} /> Mark Submitted</>}
                                                         </button>
                                                     </div>
@@ -237,14 +237,14 @@ const Practicals: React.FC = () => {
                                                             <span className="text-xs font-bold text-on-surface font-mono">{a.completed}/{a.total}</span>
                                                         </div>
                                                         <div className="flex gap-2">
-                                                            <button disabled={a.completed <= 0} onClick={() => handleAssignmentUpdate(subject._id, { completed: a.completed - 1 })} className="flex-1 h-7 rounded-md border border-outline/50 text-on-surface-variant hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
+                                                            <button disabled={a.completed <= 0} onClick={() => handleAssignmentUpdate(subject._id, { completed: a.completed - 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
                                                                 <Minus size={11} />
                                                             </button>
-                                                            <button disabled={a.completed >= a.total} onClick={() => handleAssignmentUpdate(subject._id, { completed: a.completed + 1 })} className="flex-1 h-7 rounded-md border border-outline/50 text-on-surface-variant hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
+                                                            <button disabled={a.completed >= a.total} onClick={() => handleAssignmentUpdate(subject._id, { completed: a.completed + 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
                                                                 <Plus size={11} />
                                                             </button>
                                                         </div>
-                                                        <button onClick={() => handleAssignmentUpdate(subject._id, { hardcopy: !a.hardcopy })} className={`w-full py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${a.hardcopy ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/30 font-bold' : 'border border-dashed border-outline/40 text-on-surface-variant/40 hover:border-outline/80 hover:text-on-surface-variant'}`}>
+                                                        <button onClick={() => handleAssignmentUpdate(subject._id, { hardcopy: !a.hardcopy })} className={`w-full py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${a.hardcopy ? 'bg-emerald-100 border border-emerald-300 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 font-bold' : 'bg-surface-container/30 border border-outline text-on-surface-variant/60 hover:border-outline-variant hover:text-on-surface hover:bg-surface-container'}`}>
                                                             {a.hardcopy ? <><CheckCircle size={11} /> Submitted</> : <><Target size={11} /> Mark Submitted</>}
                                                         </button>
                                                     </div>
@@ -270,3 +270,4 @@ const Practicals: React.FC = () => {
 };
 
 export default Practicals;
+

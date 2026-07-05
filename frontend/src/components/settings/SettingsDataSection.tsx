@@ -106,7 +106,7 @@ const SettingsDataSection: React.FC<SettingsDataSectionProps> = ({ onLogout, onD
             const anchor = document.createElement('a');
             anchor.href = url;
             const dateStr = new Date(createdAt).toISOString().split('T')[0];
-            anchor.download = `zenith_cloud_backup_${dateStr}_${fileId}.json`;
+            anchor.download = `semester_cloud_backup_${dateStr}_${fileId}.json`;
             document.body.appendChild(anchor);
             anchor.click();
             anchor.remove();
@@ -159,7 +159,7 @@ const SettingsDataSection: React.FC<SettingsDataSectionProps> = ({ onLogout, onD
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a');
             anchor.href = url;
-            anchor.download = `zenith_config_${new Date().toISOString().split('T')[0]}.json`;
+            anchor.download = `semester_config_${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(anchor);
             anchor.click();
             anchor.remove();
@@ -493,3 +493,4 @@ const SettingsDataSection: React.FC<SettingsDataSectionProps> = ({ onLogout, onD
 };
 
 export default SettingsDataSection;
+

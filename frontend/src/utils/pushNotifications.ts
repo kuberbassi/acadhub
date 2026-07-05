@@ -116,9 +116,10 @@ export class PushNotificationManager {
             vibrate: [200, 100, 200]
         };
 
-        await this.registration.showNotification('Zenith Test', options);
+        await this.registration.showNotification('Semester Test', options);
     }
 }
 
 // Export singleton instance
 export const pushManager = new PushNotificationManager();
+
