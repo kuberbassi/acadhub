@@ -115,7 +115,9 @@ const SubjectRow: React.FC<{
                 <div>
                     <p className="truncate max-w-[200px] leading-tight text-xs">{subject.name}</p>
                     <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[8px] font-semibold text-on-surface-variant/40 uppercase tracking-widest">{subject.type || 'Theory'}</span>
+                        <span className="text-[8px] font-semibold text-on-surface-variant/40 uppercase tracking-widest">
+                            {(subject.categories?.includes('Practical') || subject.type?.toLowerCase() === 'practical' || subject.type?.toLowerCase() === 'lab' || subject.name?.toLowerCase().includes('lab')) ? 'Practical' : 'Theory'}
+                        </span>
                         {subject.credits !== null && subject.credits !== undefined && (
                             <>
                                 <span className="w-1 h-1 rounded-full bg-on-surface-variant/20" />
@@ -630,13 +632,18 @@ const Dashboard: React.FC = () => {
                                                 >
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
+                                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                                 <span className="font-mono text-[9px] font-bold text-on-surface-variant/40 tracking-wider">
                                                                     {subject.code || 'COURSE'}
                                                                 </span>
                                                                 <span className="px-1.5 py-0.5 text-[8px] font-semibold tracking-wider rounded border border-outline bg-surface-container-low text-on-surface-variant/50 uppercase">
-                                                                    {subject.type || 'Theory'}
+                                                                    {(subject.categories?.includes('Practical') || subject.type?.toLowerCase() === 'practical' || subject.type?.toLowerCase() === 'lab' || subject.name?.toLowerCase().includes('lab')) ? 'Practical' : 'Theory'}
                                                                 </span>
+                                                                {subject.credits !== null && subject.credits !== undefined && (
+                                                                    <span className="px-1.5 py-0.5 text-[8px] font-bold tracking-wider rounded border border-outline bg-surface-container-low text-primary/70 uppercase">
+                                                                        {subject.credits} Credits
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <h4 className="text-xs font-bold text-on-surface truncate max-w-[220px]">
                                                                 {subject.name}
