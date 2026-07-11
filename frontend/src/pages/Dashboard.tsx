@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usePageMeta } from '@/hooks/usePageMeta';
-import { useDashboard, useMarkAttendance } from '@/hooks/useDashboard';
+import { useDashboard, useMarkAttendance, useDeleteSubject } from '@/hooks/useDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -189,6 +189,7 @@ const Dashboard: React.FC = () => {
     }, []);
 
     const markAttendanceMutation = useMarkAttendance();
+    const deleteSubjectMutation = useDeleteSubject();
 
     usePageMeta({
         title: 'Dashboard | Semester',
@@ -259,11 +260,10 @@ const Dashboard: React.FC = () => {
         });
         if (!isConfirmed) return;
         try {
-            await attendanceService.deleteSubject(subjectId);
+            await deleteSubjectMutation.mutateAsync(subjectId);
             showToast('success', `Deleted ${subjectName}`);
-            loadDashboard();
         } catch {
-            showToast('error', 'Failed to delete');
+            showToast('error', 'Failed to delete subject');
         }
     };
 
@@ -756,7 +756,7 @@ const Dashboard: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            <AddSubjectModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSuccess={loadDashboard} />
+            <AddSubjectModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSuccess={loadDashboard} currentSemester={currentSemester} />
             {editingSubject && <EditSubjectModal isOpen={!!editingSubject} onClose={() => setEditingSubject(null)} subject={editingSubject} onSuccess={loadDashboard} />}
             {markingSubjectId && <AttendanceModal isOpen={!!markingSubjectId} onClose={() => setMarkingSubjectId(null)} onSuccess={loadDashboard} />}
         </div>

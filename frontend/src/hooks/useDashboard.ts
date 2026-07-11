@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { attendanceService } from '@/services/attendance.service';
 import { useSemester } from '@/contexts/SemesterContext';
 import type { DashboardData } from '@/types';
+import axios from 'axios';
 
 
 export const useDashboard = () => {
@@ -11,7 +12,8 @@ export const useDashboard = () => {
 
     const query = useQuery({
         queryKey: ['dashboard', currentSemester],
-        queryFn: () => attendanceService.getDashboardData(currentSemester),
+        // Always bypass service-level memory cache so React Query drives freshness
+        queryFn: () => attendanceService.getDashboardData(currentSemester, true),
         staleTime: 30 * 1000,
         gcTime: 10 * 60 * 1000,
         refetchOnWindowFocus: true,
@@ -104,6 +106,47 @@ export const useMarkAttendance = () => {
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             queryClient.invalidateQueries({ queryKey: ['analytics'] });
             queryClient.invalidateQueries({ queryKey: ['calendar'] });
+            queryClient.invalidateQueries({ queryKey: ['subjects'] });
+        },
+    });
+};
+
+export const useDeleteSubject = () => {
+    const queryClient = useQueryClient();
+    const { currentSemester } = useSemester();
+
+    return useMutation({
+        mutationFn: async (subjectId: string) => {
+            try {
+                await attendanceService.deleteSubject(subjectId);
+            } catch (err) {
+                // 404 means the subject is already gone from DB — treat as success
+                if (axios.isAxiosError(err) && err.response?.status === 404) return;
+                throw err;
+            }
+        },
+        // Optimistically remove subject from the React Query cache immediately
+        onMutate: async (subjectId: string) => {
+            await queryClient.cancelQueries({ queryKey: ['dashboard', currentSemester] });
+            const previousData = queryClient.getQueryData<DashboardData>(['dashboard', currentSemester]);
+            if (previousData) {
+                queryClient.setQueryData<DashboardData>(['dashboard', currentSemester], (old) => {
+                    if (!old) return old;
+                    const subjects = old.subjects.filter(s => s._id !== subjectId && (s as any).id !== subjectId);
+                    return { ...old, subjects, total_subjects: subjects.length };
+                });
+            }
+            return { previousData };
+        },
+        onError: (_err, _id, context) => {
+            // Roll back the optimistic removal on real errors
+            if (context?.previousData) {
+                queryClient.setQueryData(['dashboard', currentSemester], context.previousData);
+            }
+        },
+        onSettled: () => {
+            // Force a fresh fetch from server
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             queryClient.invalidateQueries({ queryKey: ['subjects'] });
         },
     });

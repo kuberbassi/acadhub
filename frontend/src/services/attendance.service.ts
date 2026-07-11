@@ -325,12 +325,12 @@ export const attendanceService = {
             classroom,
             credits
         });
-        clearCacheByPrefix('subjects:');
+        clearDerivedCaches();
     },
 
     deleteSubject: async (subjectId: string): Promise<void> => {
         await api.delete(`/api/academic/subjects/${subjectId}`);
-        clearCacheByPrefix('subjects:');
+        clearDerivedCaches();
     },
 
     updateSubjectDetails: async (

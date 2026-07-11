@@ -7,43 +7,50 @@
 
 @layer base {
   :root {
-    /* --- LIGHT MODE (Industry Standard) --- */
-    --md-sys-color-primary: #0f172a;
+    /* ─── LIGHT MODE — Neutral-Cool (Google / Linear / Notion inspired) ──────
+     *
+     *  Background   #f5f5f5  — Google-style warm off-white, not blinding pure white
+     *  Surface      #ffffff  — card faces sit cleanly on bg
+     *  Primary      #111111  — near-black text for max contrast (18:1 on white)
+     *  Secondary    #444444  — secondary labels, still AA-compliant (9:1 on white)
+     *  Outline      #d1d1d1  — subtle dividers, visible but not harsh
+     * ─────────────────────────────────────────────────────────────────────── */
+    --md-sys-color-primary: #111111;
     --md-sys-color-on-primary: #ffffff;
-    --md-sys-color-primary-container: #f1f5f9;
-    --md-sys-color-on-primary-container: #0f172a;
+    --md-sys-color-primary-container: #f0f0f0;
+    --md-sys-color-on-primary-container: #111111;
 
-    --md-sys-color-secondary: #475569;
+    --md-sys-color-secondary: #444444;
     --md-sys-color-on-secondary: #ffffff;
-    --md-sys-color-secondary-container: #e2e8f0;
-    --md-sys-color-on-secondary-container: #0f172a;
+    --md-sys-color-secondary-container: #ebebeb;
+    --md-sys-color-on-secondary-container: #111111;
 
-    --md-sys-color-tertiary: #64748b;
+    --md-sys-color-tertiary: #6b6b6b;
     --md-sys-color-on-tertiary: #ffffff;
-    --md-sys-color-tertiary-container: #f1f5f9;
-    --md-sys-color-on-tertiary-container: #0f172a;
+    --md-sys-color-tertiary-container: #f0f0f0;
+    --md-sys-color-on-tertiary-container: #111111;
 
-    --md-sys-color-error: #ef4444;
+    --md-sys-color-error: #d93025;
     --md-sys-color-on-error: #ffffff;
-    --md-sys-color-error-container: #fee2e2;
-    --md-sys-color-on-error-container: #7f1d1d;
+    --md-sys-color-error-container: #fce8e6;
+    --md-sys-color-on-error-container: #8b1914;
 
-    --md-sys-color-background: #f8fafc;
-    --md-sys-color-on-background: #0f172a;
+    --md-sys-color-background: #f5f5f5;
+    --md-sys-color-on-background: #111111;
 
     --md-sys-color-surface: #ffffff;
-    --md-sys-color-on-surface: #0f172a;
-    --md-sys-color-surface-variant: #f1f5f9;
-    --md-sys-color-on-surface-variant: #334155; /* Higher contrast text variant (#334155 instead of #475569) */
+    --md-sys-color-on-surface: #111111;
+    --md-sys-color-surface-variant: #f0f0f0;
+    --md-sys-color-on-surface-variant: #3c3c3c;
 
-    --md-sys-color-outline: #cbd5e1; /* Stronger card/input outline border (#cbd5e1 instead of #e2e8f0) */
-    --md-sys-color-outline-variant: #94a3b8;
+    --md-sys-color-outline: #d1d1d1;
+    --md-sys-color-outline-variant: #a8a8a8;
 
-    --md-sys-color-surface-container: #f1f5f9;
+    --md-sys-color-surface-container: #f0f0f0;
     --md-sys-color-surface-container-low: #ffffff;
-    --md-sys-color-surface-container-high: #e2e8f0;
-    --md-sys-color-surface-container-highest: #cbd5e1;
-    --md-sys-color-surface-dim: #f1f5f9;
+    --md-sys-color-surface-container-high: #e5e5e5;
+    --md-sys-color-surface-container-highest: #d8d8d8;
+    --md-sys-color-surface-dim: #f0f0f0;
 
     --md-sys-elevation-level-0: 0px 0px 0px 0px;
     --md-sys-elevation-level-1: 0px 0px 0px 0px;
@@ -58,43 +65,56 @@
   }
 
   .dark {
-    /* --- DARK MODE (Charcoal Standard) --- */
-    --md-sys-color-primary: #ffffff;
-    --md-sys-color-on-primary: #09090b;
-    --md-sys-color-primary-container: #18181b;
-    --md-sys-color-on-primary-container: #ffffff;
+    /* ─── DARK MODE — Warm Charcoal (GitHub / Linear / Vercel inspired) ─────
+     *
+     *  Background   #0d0d0f  — not pure black; warm charcoal with a subtle blue-grey tint
+     *  Surface      #141417  — elevated surface, clearly distinct from bg
+     *  Container    #1c1c20  — cards: GitHub uses #161b22, Linear #1c1c1e
+     *  High         #252529  — nested elements inside cards
+     *  Highest      #2f2f34  — hovered/active states inside containers
+     *
+     *  Primary text #f2f2f2  — not blinding pure white; slightly warm off-white
+     *  Secondary    #a0a0a8  — muted labels — 4.6:1 on #141417 (AA pass)
+     *  Outline      #38383e  — dividers visible on dark bg
+     *
+     *  All text-on-surface combos pass WCAG AA (≥ 4.5:1).
+     * ─────────────────────────────────────────────────────────────────────── */
+    --md-sys-color-primary: #f2f2f2;
+    --md-sys-color-on-primary: #0d0d0f;
+    --md-sys-color-primary-container: #1c1c20;
+    --md-sys-color-on-primary-container: #f2f2f2;
 
-    --md-sys-color-secondary: #a1a1aa;
-    --md-sys-color-on-secondary: #09090b;
-    --md-sys-color-secondary-container: #27272a;
-    --md-sys-color-on-secondary-container: #ffffff;
+    --md-sys-color-secondary: #a0a0a8;
+    --md-sys-color-on-secondary: #0d0d0f;
+    --md-sys-color-secondary-container: #252529;
+    --md-sys-color-on-secondary-container: #f2f2f2;
 
-    --md-sys-color-tertiary: #e4e4e7;
-    --md-sys-color-on-tertiary: #09090b;
-    --md-sys-color-tertiary-container: #18181b;
-    --md-sys-color-on-tertiary-container: #ffffff;
+    --md-sys-color-tertiary: #d4d4d8;
+    --md-sys-color-on-tertiary: #0d0d0f;
+    --md-sys-color-tertiary-container: #1c1c20;
+    --md-sys-color-on-tertiary-container: #f2f2f2;
 
-    --md-sys-color-error: #f87171;
-    --md-sys-color-on-error: #450a0a;
-    --md-sys-color-error-container: #7f1d1d;
-    --md-sys-color-on-error-container: #fecaca;
+    --md-sys-color-error: #ff6b6b;
+    --md-sys-color-on-error: #3b0000;
+    --md-sys-color-error-container: #5c1414;
+    --md-sys-color-on-error-container: #ffb3b3;
 
-    --md-sys-color-background: #000000;
-    --md-sys-color-on-background: #fafafa;
+    --md-sys-color-background: #0d0d0f;
+    --md-sys-color-on-background: #f2f2f2;
 
-    --md-sys-color-surface: #0e0e11; /* Slightly elevated dark background surface */
-    --md-sys-color-on-surface: #ffffff;
-    --md-sys-color-surface-variant: #16161a;
-    --md-sys-color-on-surface-variant: #e4e4e7; /* Highly legible white-tinted font style */
+    --md-sys-color-surface: #141417;
+    --md-sys-color-on-surface: #f2f2f2;
+    --md-sys-color-surface-variant: #1c1c20;
+    --md-sys-color-on-surface-variant: #d4d4d8;
 
-    --md-sys-color-outline: #3f3f46; /* Pronounced Zinc border outlining */
-    --md-sys-color-outline-variant: #52525b;
+    --md-sys-color-outline: #38383e;
+    --md-sys-color-outline-variant: #4a4a52;
 
-    --md-sys-color-surface-container: #16161a; /* Distinct card layering relative to background */
-    --md-sys-color-surface-container-low: #0a0a0c;
-    --md-sys-color-surface-container-high: #242429; /* Sub-elements inside cards POP */
-    --md-sys-color-surface-container-highest: #303036;
-    --md-sys-color-surface-dim: #000000;
+    --md-sys-color-surface-container: #1c1c20;
+    --md-sys-color-surface-container-low: #111114;
+    --md-sys-color-surface-container-high: #252529;
+    --md-sys-color-surface-container-highest: #2f2f34;
+    --md-sys-color-surface-dim: #0a0a0c;
 
     --md-sys-elevation-level-0: 0px 0px 0px 0px;
     --md-sys-elevation-level-1: 0px 0px 0px 0px;

@@ -76,6 +76,8 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
             }
         } catch (error) {
             console.error(error);
+            showToast('error', 'Subject not found or has been deleted');
+            onClose();
         }
     };
 

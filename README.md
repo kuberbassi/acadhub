@@ -70,3 +70,16 @@ You can run the entire workspace concurrently from the root directory:
    ```
    * Frontend will start on `http://localhost:5173`
    * Backend API will start on `http://localhost:5001`
+
+---
+
+## 🧪 Testing
+
+Run the attendance backend test suite to verify DB connectivity, all attendance marking statuses, counter logic, duplicate detection, substitution flow, and query filters — without touching any real data:
+
+```bash
+cd api-node
+npx tsx scripts/test-attendance.ts
+```
+
+> All test data is created under a sentinel semester (`99`) with dates in year `2000` and is fully cleaned up after the run.
