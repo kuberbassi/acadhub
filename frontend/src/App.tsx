@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './queryClient';
@@ -20,21 +20,23 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useHaptics } from './hooks/useHaptics';
 
 // Layout
-import AppLayout from './components/layout/AppLayout';
 import PageTransition from './components/ui/PageTransition';
 
-// Pages - Static Imports for instant, lag-free navigation without loading screens
+// Keep the landing page in the entry bundle and split everything else by route.
+// This prevents dashboard-only editors, charts and PDF tools from delaying the
+// public page's first render.
 import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Settings from './pages/Settings';
-import Calendar from './pages/Calendar';
-import TimeTable from './pages/TimeTable';
-import Courses from './pages/Courses';
-import Practicals from './pages/Practicals';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService';
-import NotFound from './pages/NotFound';
+const AppLayout = lazy(() => import('./components/layout/AppLayout'));
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Calendar = lazy(() => import('./pages/Calendar'));
+const TimeTable = lazy(() => import('./pages/TimeTable'));
+const Courses = lazy(() => import('./pages/Courses'));
+const Practicals = lazy(() => import('./pages/Practicals'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // ── Route Guards ─────────────────────────────────────────────────────────────
 
@@ -60,9 +62,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/"
         element={
-          <PageTransition>
-            <Landing />
-          </PageTransition>
+          <Landing />
         }
       />
       <Route
@@ -187,7 +187,9 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-on-background font-sans transition-colors duration-300 selection:bg-primary-container selection:text-primary">
-      <AppRoutes />
+      <Suspense fallback={<LoadingSpinner fullScreen />}>
+        <AppRoutes />
+      </Suspense>
       {import.meta.env.PROD && !['localhost', '127.0.0.1'].includes(window.location.hostname) && <VercelAnalytics />}
     </div>
   );

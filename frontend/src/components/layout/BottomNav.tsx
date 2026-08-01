@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, CalendarClock, Settings,
     GraduationCap, Sun, Moon,
-    CalendarDays, Beaker, LogOut
+    CalendarDays, Beaker, LogOut, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -134,13 +134,13 @@ const BottomNav: React.FC<BottomNavProps> = () => {
             return { type: 'icon', element: radialItems[activeIdx].icon, key: `hovered-${activeIdx}` };
         }
         if (isHolding) {
-            return { type: 'logo', element: '/Semester-logo.png', key: 'logo' };
+            return { type: 'logo', element: '/Semester-logo-96.png', key: 'logo' };
         }
         const currentItem = radialItems.find(item => item.href === location.pathname);
         if (currentItem) {
             return { type: 'icon', element: currentItem.icon, key: `current-${location.pathname}` };
         }
-        return { type: 'logo', element: '/Semester-logo.png', key: 'logo' };
+        return { type: 'logo', element: '/Semester-logo-96.png', key: 'logo' };
     };
 
     const centerIconInfo = getCenterIcon();
@@ -368,7 +368,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
                                             <span className="text-[10px] text-red-500/50">Disconnect account</span>
                                         </div>
                                     </div>
-                                    <span className="material-symbols-outlined text-red-500 text-sm">chevron_right</span>
+                                    <ChevronRight size={14} className="text-red-500" aria-hidden="true" />
                                 </button>
                             </div>
                         </motion.div>

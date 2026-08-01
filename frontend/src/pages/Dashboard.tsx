@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Trash2, Edit2, Check, X,
-    Activity, Target, Flame, ChevronRight, Settings as SettingsIcon
+    Activity, Target, Flame, ChevronRight, ChevronsUpDown, Settings as SettingsIcon
 } from 'lucide-react';
 import AddSubjectModal from '@/components/modals/AddSubjectModal';
 import EditSubjectModal from '@/components/modals/EditSubjectModal';
@@ -349,7 +349,7 @@ const Dashboard: React.FC = () => {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline bg-surface hover:bg-surface-container-high transition-colors text-xs font-semibold text-on-surface-variant hover:text-on-surface whitespace-nowrap cursor-pointer"
                         >
                             Sem {currentSemester}
-                            <span className="material-symbols-outlined text-[14px] leading-none">unfold_more</span>
+                            <ChevronsUpDown size={14} aria-hidden="true" />
                         </button>
                         <AnimatePresence>
                             {semDropOpen && (
@@ -370,7 +370,7 @@ const Dashboard: React.FC = () => {
                                                 }`}
                                         >
                                             <span>Sem {s}</span>
-                                            {s === currentSemester && <span className="material-symbols-outlined text-[10px] leading-none">check</span>}
+                                            {s === currentSemester && <Check size={10} aria-hidden="true" />}
                                         </button>
                                     ))}
                                 </motion.div>

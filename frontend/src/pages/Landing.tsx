@@ -59,7 +59,7 @@ const Landing: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-3 group">
                         <div className="w-8 h-8 rounded bg-primary flex items-center justify-center border border-outline/10 shadow-sm transition-transform duration-300 group-hover:rotate-6">
-                            <img src="/Semester-logo.png" alt="Z" className="w-6 h-6 object-contain invert dark:invert-0" />
+                            <img src="/Semester-logo-96.png" alt="Z" width="24" height="24" className="w-6 h-6 object-contain invert dark:invert-0" />
                         </div>
                         <span className="font-extrabold text-lg tracking-tight text-on-surface">Semester</span>
                     </Link>

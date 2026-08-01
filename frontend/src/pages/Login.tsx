@@ -57,7 +57,7 @@ const Login: React.FC = () => {
                         className="mb-8 flex justify-center"
                     >
                         <div className="w-24 h-24 rounded-xl overflow-hidden bg-surface-variant border border-outline shadow-sm flex items-center justify-center">
-                            <img src="/Semester-logo.png" alt="Semester Logo" className="w-[72px] h-[72px] object-contain invert dark:invert-0" />
+                            <img src="/Semester-logo-96.png" alt="Semester Logo" width="72" height="72" className="w-[72px] h-[72px] object-contain invert dark:invert-0" />
                         </div>
                     </motion.div>
 
