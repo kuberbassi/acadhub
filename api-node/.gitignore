@@ -8,3 +8,5 @@ build/
 *.log
 .gemini/
 .antigravity/
+# Incremental TypeScript build cache
+.tscache/

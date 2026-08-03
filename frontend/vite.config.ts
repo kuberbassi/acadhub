@@ -42,7 +42,7 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 365 days
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -56,7 +56,7 @@ export default defineConfig({
               cacheName: 'gstatic-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 365 days
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -76,8 +76,9 @@ export default defineConfig({
           }
         ]
       },
+      // Disable SW in dev — prevents Workbox overhead during HMR cycles
       devOptions: {
-        enabled: true
+        enabled: false
       }
     })
   ],
@@ -105,12 +106,32 @@ export default defineConfig({
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
   build: {
+    // Target modern browsers — smaller output, better tree-shaking
+    target: 'ES2022',
+    // No sourcemaps in production — reduces bundle size
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          charts: ['chart.js', 'react-chartjs-2'],
+          vendor:     ['react', 'react-dom', 'react-router-dom'],
+          charts:     ['chart.js', 'react-chartjs-2'],
           animations: ['framer-motion'],
+          // Split all Tiptap extensions into their own chunk — kept out of the main bundle
+          tiptap:     [
+            '@tiptap/react',
+            '@tiptap/starter-kit',
+            '@tiptap/pm',
+            '@tiptap/extension-image',
+            '@tiptap/extension-link',
+            '@tiptap/extension-placeholder',
+            '@tiptap/extension-task-item',
+            '@tiptap/extension-task-list',
+            '@tiptap/extension-text-align',
+            '@tiptap/extension-underline',
+            '@tiptap/extension-youtube',
+          ],
+          // PDF/canvas libs only needed on demand — isolated from main entry
+          pdf:        ['jspdf', 'jspdf-autotable', 'html2canvas'],
         },
       },
     },

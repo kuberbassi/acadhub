@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": ".tscache/tsconfig.tsbuildinfo",
     "target": "ES2020",
     "module": "commonjs",
     "lib": ["ES2020"],

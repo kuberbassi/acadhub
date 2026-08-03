@@ -15,9 +15,6 @@
     "typecheck": "npm run build",
     "smoke:api": "npm run smoke:api --workspace api-node"
   },
-  "dependencies": {
-    "@vercel/analytics": "^1.6.1"
-  },
   "devDependencies": {
     "concurrently": "^9.2.1"
   }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd frontend && npm ci && npm run build && cd ../api-node && npm ci && npm run build",
+  "buildCommand": "npm ci && npm run build --workspace frontend && npm run build --workspace api-node",
   "outputDirectory": "frontend/dist",
   "installCommand": "echo 'install handled by buildCommand'",
   "framework": null,
@@ -64,15 +64,6 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/(.*).js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400, must-revalidate"
         }
       ]
     },
