@@ -118,12 +118,14 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         const prevScheduled = [...scheduledClasses];
         const prevLogs = [...attendanceLogs];
         const subjectId = String(subject?._id || subject?.id || subject?.subject_id || '');
-        const logId = String(subject?.log_id || `optimistic-${subjectId}-${dateStr}`);
+        const attendanceType = String(subject?.attendance_type || subject?.type || 'Lecture');
+        const logId = String(subject?.log_id || `optimistic-${subjectId}-${dateStr}-${attendanceType}`);
         const subjectName = String(subject?.name || subject?.subject_name || 'Unknown Subject');
 
         setScheduledClasses((prev) => prev.map((row) => {
             const rowId = String(row?._id || row?.id || row?.subject_id || '');
-            if (rowId !== subjectId) return row;
+            const rowAttendanceType = String(row?.attendance_type || row?.type || 'Lecture');
+            if (rowId !== subjectId || rowAttendanceType !== attendanceType) return row;
             return {
                 ...row,
                 marked: true,
@@ -136,7 +138,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
             // Check by both log_id and subject_id to prevent duplicates on the same date
             const existingIndex = prev.findIndex((l: any) => 
                 (subject?.log_id && String(l?._id || l?.id) === String(subject?.log_id)) ||
-                (String(l?.subject_id) === subjectId && l?.date === dateStr)
+                (String(l?.subject_id) === subjectId && l?.date === dateStr && String(l?.type || '') === attendanceType)
             );
             if (existingIndex >= 0) {
                 const next = [...prev];
@@ -149,7 +151,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                 subject_name: subjectName,
                 date: dateStr,
                 status,
-                type: String(subject?.type || 'class'),
+                type: attendanceType,
             }, ...prev];
         });
 
@@ -193,13 +195,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                 res = await attendanceService.editAttendance(subject.log_id, status, undefined, dateStr);
                 showToast('success', `Updated to ${status}`);
             } else {
-                res = await attendanceService.markAttendance(subjectId, status, dateStr, undefined, undefined, currentSemester);
+                res = await attendanceService.markAttendance(subjectId, status, dateStr, undefined, undefined, currentSemester, subject.attendance_type);
                 showToast('success', `Marked ${status}`);
             }
             if (res?.log?._id) {
                 const realId = String(res.log._id);
-                setScheduledClasses(prev => prev.map(r => String(r._id) === subjectId ? { ...r, log_id: realId, marked: true, marked_status: status } : r));
-                setAttendanceLogs(prev => prev.map(l => (String(l.subject_id) === subjectId && l.date === dateStr) ? { ...l, _id: realId, status } : l));
+                setScheduledClasses(prev => prev.map(r => String(r._id) === subjectId && String(r.attendance_type) === String(subject.attendance_type) ? { ...r, log_id: realId, marked: true, marked_status: status } : r));
+                setAttendanceLogs(prev => prev.map(l => (String(l.subject_id) === subjectId && l.date === dateStr && String(l.type) === String(subject.attendance_type)) ? { ...l, _id: realId, status } : l));
             }
             debouncedOnSuccess();
         } catch (error: any) {
@@ -226,9 +228,11 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         const prevScheduled = [...scheduledClasses];
         const prevLogs = [...attendanceLogs];
         const logId = String(subject?.log_id || '');
+        const attendanceType = String(subject?.attendance_type || subject?.type || 'Lecture');
         setScheduledClasses((prev) => prev.map((row) => {
             const rowId = String(row?._id || row?.id || row?.subject_id || '');
-            if (rowId !== subjectId) return row;
+            const rowAttendanceType = String(row?.attendance_type || row?.type || 'Lecture');
+            if (rowId !== subjectId || rowAttendanceType !== attendanceType) return row;
             return { ...row, marked: false, marked_status: 'pending', log_id: null };
         }));
         setAttendanceLogs((prev) => prev.filter((log: any) => String(log?._id || log?.id) !== logId));
@@ -276,18 +280,18 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                 }
                 res = await attendanceService.markAttendance(
                     subjectId, detailStatus, dateStr, detailNotes,
-                    detailStatus === 'substituted' ? detailSubstitutedBy : undefined, currentSemester
+                    detailStatus === 'substituted' ? detailSubstitutedBy : undefined, currentSemester, subject.attendance_type
                 );
                 showToast('success', 'Attendance marked successfully');
             }
 
             if (res?.log?._id) {
                 const realId = String(res.log._id);
-                setScheduledClasses(prev => prev.map(r => String(r._id) === subjectId ? { ...r, log_id: realId, marked: true, marked_status: detailStatus } : r));
+                setScheduledClasses(prev => prev.map(r => String(r._id) === subjectId && String(r.attendance_type) === String(subject.attendance_type) ? { ...r, log_id: realId, marked: true, marked_status: detailStatus } : r));
                 setAttendanceLogs(prev => {
                     const existingIndex = prev.findIndex((l: any) => 
                         (subject.log_id && String(l?._id || l?.id) === String(subject.log_id)) ||
-                        (String(l.subject_id) === subjectId && l.date === dateStr)
+                        (String(l.subject_id) === subjectId && l.date === dateStr && String(l.type) === String(subject.attendance_type))
                     );
                     if (existingIndex >= 0) {
                         const next = [...prev];
@@ -300,7 +304,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                         subject_name: subject.name || subject.subject_name || 'Unknown Subject',
                         date: dateStr,
                         status: detailStatus,
-                        type: String(subject?.type || 'class'),
+                        type: String(subject?.attendance_type || subject?.type || 'Lecture'),
                     }, ...prev];
                 });
             }
@@ -390,12 +394,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                 <div className="space-y-2">
                                     {groupConsecutiveClasses(scheduledClasses).map((subject, idx) => {
                                         const subId = subject._id;
+                                        const rowId = `${subId}-${subject.attendance_type || idx}`;
                                         return (
                                             <SubjectRow
-                                                key={`scheduled-${subId}-${idx}`}
+                                                key={`scheduled-${rowId}`}
                                                 subject={subject}
                                                 status={subject.marked_status}
-                                                expanded={expandedSubjectId === subId}
+                                                expanded={expandedSubjectId === rowId}
                                                 onSimpleMark={(subj: any, status: string) => {
                                                     if (subject.isMerged) {
                                                         const primary = subject.originalClasses[0];
@@ -412,7 +417,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                                         showToast('error', 'No attendance record found to delete.');
                                                     }
                                                 }}
-                                                onOpenDetails={(id: string, status: string) => openDetails(id, status, subject.notes)}
+                                                onOpenDetails={(_id: string, status: string) => openDetails(rowId, status, subject.notes)}
                                                 onCloseDetails={() => setExpandedSubjectId(null)}
                                                 detailStatus={detailStatus}
                                                 setDetailStatus={setDetailStatus}
@@ -702,6 +707,7 @@ const groupConsecutiveClasses = (classes: any[]) => {
         const subjectId = String(slot.subject_id || slot.subjectId || '');
 
         const currentGroupSubId = currentGroup ? String(currentGroup.subject_id || currentGroup.subjectId || '') : null;
+        const hasSameAttendanceBlock = String(slot.attendance_type || '') === String(currentGroup?.attendance_type || '');
 
         // Merge Condition:
         // 1. Same Subject ID (if present)
@@ -710,7 +716,7 @@ const groupConsecutiveClasses = (classes: any[]) => {
         const isSameSubject = (subjectId && currentGroupSubId && subjectId === currentGroupSubId) ||
             (slot.name === currentGroup?.name);
 
-        if (currentGroup && isSameSubject && slot.type === currentGroup.type) {
+        if (currentGroup && isSameSubject && slot.type === currentGroup.type && hasSameAttendanceBlock) {
             // Merge
             currentGroup.originalClasses.push(slot);
             // Update time range

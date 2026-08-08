@@ -305,14 +305,16 @@ router.get('/classes-for-date', async (req: AuthRequest, res) => {
     type Slot = { subject_id?: string; subjectId?: string; time?: string; type?: string; [k: string]: unknown }
     const schedule = (timetableDoc?.schedule as Record<string, Slot[]> | undefined) ?? {}
 
-    const daySlots: Slot[] = [...(schedule[dayName] ?? [])]
-      .filter((s: any) => getSlotType((s as Record<string, unknown>)) === 'class')
-      .filter((s: any) => Boolean((s.subject_id ?? s.subjectId ?? '').toString().trim()))
+    const orderedDaySlots: Slot[] = [...(schedule[dayName] ?? [])]
       .sort((a, b) => {
         const aStart = String((a as any).start_time ?? (a as any).startTime ?? (a as any).time ?? '')
         const bStart = String((b as any).start_time ?? (b as any).startTime ?? (b as any).time ?? '')
         return parseTimeToMinutes(aStart) - parseTimeToMinutes(bStart)
       })
+    const schedulePosition = new Map(orderedDaySlots.map((slot, idx) => [slot, idx]))
+    const daySlots: Slot[] = orderedDaySlots
+      .filter((s: any) => getSlotType((s as Record<string, unknown>)) === 'class')
+      .filter((s: any) => Boolean((s.subject_id ?? s.subjectId ?? '').toString().trim()))
 
     const regularLogs: typeof logsForDate = []
     const substitutionLogs: typeof logsForDate = []
@@ -335,33 +337,44 @@ router.get('/classes-for-date', async (req: AuthRequest, res) => {
     }
 
     const matchedLogIds = new Set<string>()
-    const subjectSlotGroups = new Map<string, { slot: Slot; originalIndex: number }[]>()
-    daySlots.forEach((slot, idx) => {
-      const sid = (slot.subject_id ?? slot.subjectId ?? '') as string
-      if (!subjectSlotGroups.has(sid)) subjectSlotGroups.set(sid, [])
-      subjectSlotGroups.get(sid)!.push({ slot, originalIndex: idx })
-    })
-
     const slotLogMap = new Map<number, any>()
-    for (const [sid, slotsArr] of subjectSlotGroups) {
+    const blockTypeMap = new Map<number, string>()
+    const legacyLogIndex = new Map<string, number>()
+
+    // A block is consecutive only when the immediately preceding timetable slot
+    // is the same subject and type. A repeated subject later in the day is a new
+    // block and therefore needs its own attendance record.
+    for (let idx = 0; idx < daySlots.length; idx++) {
+      const slot = daySlots[idx]
+      const sid = String(slot.subject_id ?? slot.subjectId ?? '')
+      const previous = idx > 0 ? daySlots[idx - 1] : null
+      const continuesPrevious = Boolean(previous)
+        && schedulePosition.get(slot) === (schedulePosition.get(previous!) ?? -2) + 1
+        && String(previous!.subject_id ?? previous!.subjectId ?? '') === sid
+        && String(previous!.type ?? '') === String(slot.type ?? '')
+
+      const start = String((slot as any).start_time ?? (slot as any).startTime ?? (slot as any).time ?? idx)
+      const attendanceType = continuesPrevious
+        ? blockTypeMap.get(idx - 1)!
+        : `${String(slot.type || 'Lecture')}::${start}`.slice(0, 50)
+      blockTypeMap.set(idx, attendanceType)
+
       const subjectLogs = logsBySubject.get(sid) ?? []
-      let currentLogIdx = -1
-      for (let i = 0; i < slotsArr.length; i++) {
-        const { slot, originalIndex } = slotsArr[i]
-        let isNewBlock = true
-        if (i > 0) {
-          const prevSlot = slotsArr[i - 1].slot
-          if ((slot.type ?? '') === (prevSlot.type ?? '')) isNewBlock = false
-        }
-        if (currentLogIdx === -1) {
-          if (subjectLogs.length > 0) currentLogIdx = 0
-        } else if (isNewBlock) {
-          currentLogIdx++
-        }
-        const log = (currentLogIdx >= 0 && currentLogIdx < subjectLogs.length) ? subjectLogs[currentLogIdx] : null
-        if (log) matchedLogIds.add(log.id)
-        slotLogMap.set(originalIndex, log)
+      let log = subjectLogs.find((candidate: any) => candidate.type === attendanceType && !matchedLogIds.has(candidate.id)) ?? null
+
+      // Preserve compatibility with attendance created before block identities
+      // were introduced by assigning one legacy log to each consecutive block.
+      if (!log && !continuesPrevious) {
+        const nextLegacyIndex = legacyLogIndex.get(sid) ?? 0
+        const legacyLogs = subjectLogs.filter((candidate: any) => !String(candidate.type).includes('::'))
+        log = legacyLogs[nextLegacyIndex] ?? null
+        legacyLogIndex.set(sid, nextLegacyIndex + 1)
+      } else if (!log && continuesPrevious) {
+        log = slotLogMap.get(idx - 1) ?? null
       }
+
+      if (log) matchedLogIds.add(log.id)
+      slotLogMap.set(idx, log)
     }
 
     const classes = daySlots.map((slot, idx) => {
@@ -370,7 +383,7 @@ router.get('/classes-for-date', async (req: AuthRequest, res) => {
       const log = slotLogMap.get(idx) ?? null
       // Provide a subject_name_fallback for cases where the subject_id is stale/unresolvable
       const subjectNameFallback = subject?.name ?? (slot as any).label ?? (slot as any).name ?? ''
-      return { slot, subject, subject_name: subjectNameFallback, log, marked: !!log }
+      return { slot, subject, subject_name: subjectNameFallback, log, marked: !!log, attendance_type: blockTypeMap.get(idx) }
     })
 
     const extraLogs = [

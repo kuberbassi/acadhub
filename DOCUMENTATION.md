@@ -132,12 +132,14 @@ Tracks individual marked attendance logs.
 | `subject_id` | `String` | | Foreign key referencing `Subject.id`. |
 | `subject_name` | `String` | | Helper string cache of subject name. |
 | `date` | `String` | | Date of lecture (Format: `YYYY-MM-DD`). |
-| `status` | `Enum` | `AttendanceStatus` | `present`, `absent`, `late`, `medical`, `substituted`, `cancelled`. |
-| `type` | `String` | `@default("Lecture")` | Type of slot (e.g. `Lecture`, `Practical`). |
+| `status` | `Enum` | `AttendanceStatus` | `present`, `absent`, `late`, `approved_medical`, `medical`, `duty`, `substituted`, or `cancelled`. |
+| `type` | `String` | `@default("Lecture")` | Attendance identity. Manual/legacy records use a class type such as `Lecture`; timetable-generated records use `<slot type>::<block start>` so separate same-subject blocks on one date remain independently markable. |
 | `notes` | `String?` | | Student notes. |
 | `semester` | `Int?` | | Cached semester number. |
 | `substituted_by`| `String?` | | Foreign key referencing substitute subject ID. |
 | `timestamp` | `DateTime` | `@default(now())` | Entry log creation time. |
+
+Attendance logs have a compound uniqueness constraint on `user_id`, `subject_id`, `date`, and `type`. The timetable attendance flow therefore supplies a stable block-aware `type`: every adjacent run of the same subject and slot type receives the identifier of the run's first period. This preserves one-click marking for consecutive periods without collapsing another occurrence of that subject later in the day.
 
 ---
 
@@ -225,3 +227,11 @@ The destination account submits this token. The backend verifies the signature, 
 
 ### 3.3 🤖 LLM Failover In Semester Assistant
 The AI Semester Assistant uses a Groq LLM (`llama-3.3-70b-versatile`) to generate query completions. In the event of rate limit errors or API timeouts, it falls back to a Google Gemini API (`gemini-2.5-flash`) stream, guaranteeing uninterrupted utility for users.
+
+### 3.4 Timetable Attendance Blocks
+
+`GET /api/attendance/classes-for-date` sorts the selected day's full timetable and assigns class slots to attendance blocks. A class continues the previous block only when the immediately preceding timetable slot is also a class with both the same subject and the same slot type. Breaks and custom slots therefore end a block.
+
+For example, a schedule of `Mathematics, Mathematics, Physics, Mathematics` produces three markable blocks: the first two Mathematics periods share one mark, Physics has one mark, and the later Mathematics period has its own mark. The API returns `attendance_type` for each scheduled row, and the frontend sends that value to `POST /api/attendance/mark` as the record's `type`.
+
+The classes-for-date response matches block-aware logs by this exact identity. Older records that only contain a legacy type such as `Lecture` remain supported and are assigned sequentially to compatible consecutive blocks. Optimistic marking, editing, and deletion in `AttendanceModal` use the same block identity, preventing one occurrence from changing another occurrence of the same subject on the same date.
