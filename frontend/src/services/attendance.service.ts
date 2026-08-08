@@ -164,7 +164,8 @@ export const attendanceService = {
         date?: string,
         notes?: string,
         substitutedById?: string,
-        semester?: number
+        semester?: number,
+        type?: string
     ): Promise<any> => {
         const res = await api.post('/api/attendance/mark', {
             subject_id: subjectId,
@@ -173,6 +174,7 @@ export const attendanceService = {
             notes,
             substituted_by: substitutedById,
             semester,
+            type,
         });
         clearDerivedCaches();
         return res.data?.data;
@@ -262,6 +264,8 @@ export const attendanceService = {
                     name: subj.name || slot.name || c.subject_name || slot.label || 'Unknown',
                     time: slot.time || ((slot.start_time || slot.startTime) ? `${slot.start_time || slot.startTime}${(slot.end_time || slot.endTime) ? ` - ${slot.end_time || slot.endTime}` : ''}` : ''),
                     type: slot.type || 'Lecture',
+                    attendance_type: c.attendance_type || slot.type || 'Lecture',
+                    slot_id: String(slot.id || slot._id || slot.start_time || slot.startTime || ''),
                     semester: subj.semester || slot.semester,
                     marked: c.marked || false,
                     marked_status: log ? log.status : 'pending',

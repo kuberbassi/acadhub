@@ -10,7 +10,7 @@ Semester is a high-performance, full-stack Academic Operating System designed fo
 
 ## 🚀 Key Features
 
-- 📅 **Timetable & Attendance Log**: Plan weekly slots and record classes with substitution/cancellation support.
+- 📅 **Timetable & Attendance Log**: Plan weekly slots and record classes with substitution/cancellation support. Consecutive periods of the same subject share one smart attendance mark, while a later occurrence after another class is tracked separately.
 - 📊 **Target Compliance & Bunk Guard**: Dynamic compliance indicators showing how many classes you can bunk or must attend to stay above your target percentage.
 - 🤖 **Semester Assistant**: Contextual study chat assistant powered by Groq LLM with automatic failover to Google Gemini.
 - 💾 **Google Drive Auto-Sync**: Auto-backup and sync academic data to your private Google AppData folder.
