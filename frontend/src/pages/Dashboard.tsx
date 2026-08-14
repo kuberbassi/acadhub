@@ -24,7 +24,7 @@ const normalizeId = (value: unknown) => (value === null || value === undefined ?
 const findSubjectForSlot = (subjects: any[], slot: any) => {
     const explicitType = String(slot?.type || '').trim().toLowerCase();
     
-    if (explicitType === 'break' || explicitType === 'lunch' || explicitType === 'gap') return undefined;
+    if (['break', 'lunch', 'gap', 'free', 'custom'].includes(explicitType)) return undefined;
 
     const slotSubjectId = normalizeId(slot?.subject_id || slot?.subjectId || slot?.subject?._id || slot?.subject?.id);
     if (slotSubjectId) {
@@ -73,7 +73,8 @@ const findSubjectForSlot = (subjects: any[], slot: any) => {
         const acronym = subName.split(/\s+/).map(w => w[0]).join('');
         if (acronym === slotLabel) return true;
         
-        if (subName.includes(slotLabel) || subCode.includes(slotLabel) || slotLabel.includes(subCode)) return true;
+        if (subName.includes(slotLabel)) return true;
+        if (subCode && (subCode.includes(slotLabel) || slotLabel.includes(subCode))) return true;
 
         return false;
     });
