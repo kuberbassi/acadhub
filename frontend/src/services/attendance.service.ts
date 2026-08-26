@@ -182,21 +182,14 @@ export const attendanceService = {
     },
 
     markAllAttendance: async (
-        subjectIds: string[],
-        status: string,
-        date?: string,
-        semester?: number
-    ): Promise<void> => {
-        const results = await Promise.allSettled(
-            subjectIds.map(subject_id =>
-                api.post('/api/attendance/mark', { subject_id, status, date, semester })
-            )
-        );
-        const failures = results.filter(r => r.status === 'rejected');
-        if (failures.length > 0) {
-            throw new Error(`${failures.length} of ${subjectIds.length} marks failed`);
-        }
+        classes: Array<{ subject_id: string; type: string }>,
+        status: 'present' | 'absent' | 'approved_medical' | 'cancelled',
+        date: string,
+        semester: number
+    ): Promise<{ marked_count: number; activity_id: string }> => {
+        const response = await api.post('/api/attendance/mark-all', { classes, status, date, semester });
         clearDerivedCaches();
+        return response.data.data;
     },
 
     unmarkAttendanceLogs: async (logIds: string[], date: string, semester: number): Promise<{ deleted_count: number; requested_count: number }> => {

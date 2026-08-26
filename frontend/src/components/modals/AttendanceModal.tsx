@@ -318,6 +318,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
             return;
         }
 
+        const existingRecords = attendanceLogs.filter(log => log?.date === dateStr);
+        if (existingRecords.length > 0) {
+            setIsMarkAllOpen(false);
+            showToast('error', 'Some records are already marked. Use Unmark all first, then bulk mark the date.');
+            return;
+        }
+
         setIsMarkAllOpen(false);
         setIsMarkingAll(true);
         const classes = groupConsecutiveClasses(scheduledClasses).map(subject =>
@@ -325,44 +332,20 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         );
 
         try {
-            let failed = 0;
-            for (const subject of classes) {
-                const subjectId = String(subject?._id || subject?.id || subject?.subject_id || '');
-                try {
-                    if (!subjectId) throw new Error('Scheduled class has no subject ID');
+            const requestedClasses = classes.map(subject => ({
+                subject_id: String(subject?._id || subject?.id || subject?.subject_id || ''),
+                type: String(subject.attendance_type || subject.type || 'Lecture'),
+            }));
+            if (requestedClasses.some(subject => !subject.subject_id)) throw new Error('Scheduled class has no subject ID');
 
-                    if (subject.log_id && !String(subject.log_id).startsWith('optimistic-')) {
-                        await attendanceService.editAttendance(String(subject.log_id), status, undefined, dateStr);
-                        continue;
-                    }
-
-                    const result = await attendanceService.markAttendance(
-                        subjectId,
-                        status,
-                        dateStr,
-                        undefined,
-                        undefined,
-                        currentSemester,
-                        String(subject.attendance_type || subject.type || 'Lecture')
-                    );
-
-                    // The create endpoint returns the existing block on a uniqueness race.
-                    // Explicitly edit it when its stored status differs from the bulk choice.
-                    if (result?.duplicate && result?.log?._id && result.log.status !== status) {
-                        await attendanceService.editAttendance(String(result.log._id), status, undefined, dateStr);
-                    }
-                } catch {
-                    failed += 1;
-                }
-            }
+            await attendanceService.markAllAttendance(requestedClasses, status, dateStr, currentSemester);
 
             const [refreshedLogs, refreshedClasses] = await Promise.all([
                 fetchAttendanceLogs(selectedDate),
                 loadClassesForDate(selectedDate, true),
             ]);
             if (!refreshedLogs || !refreshedClasses) {
-                const requestState = failed > 0 ? `${failed} request${failed === 1 ? '' : 's'} lost confirmation` : 'Updates were sent';
-                showToast('error', `${requestState}, but the latest records could not be verified. Retry loading before making more changes.`);
+                showToast('error', 'Bulk marking was sent, but the latest records could not be verified. Retry loading before making more changes.');
             } else {
                 const refreshedBlocks = groupConsecutiveClasses(refreshedClasses).map(subject =>
                     subject.isMerged ? subject.originalClasses[0] : subject
@@ -658,6 +641,11 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                         {isMarkAllOpen && (
                                             <div className="absolute right-0 top-8 z-[70] w-44 overflow-hidden rounded-xl border border-outline bg-surface p-1.5 shadow-xl">
                                                 <div className="px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/50">Mark all as</div>
+                                                {markedRecordsCount > 0 && (
+                                                    <p className="mx-1 mb-1 rounded-lg bg-amber-500/10 px-2 py-2 text-[9px] font-semibold leading-relaxed text-amber-600 dark:text-amber-400">
+                                                        Unmark all {markedRecordsCount} existing record{markedRecordsCount === 1 ? '' : 's'} before bulk marking.
+                                                    </p>
+                                                )}
                                                 {[
                                                     { status: 'present', label: 'Present', dot: 'bg-green-500' },
                                                     { status: 'absent', label: 'Absent', dot: 'bg-red-500' },
@@ -668,7 +656,8 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                                         key={option.status}
                                                         type="button"
                                                         onClick={() => markAllScheduled(option.status as 'present' | 'absent' | 'approved_medical' | 'cancelled')}
-                                                        disabled={scheduledClasses.length === 0 || !recordsReady}
+                                                        disabled={scheduledClasses.length === 0 || !recordsReady || markedRecordsCount > 0}
+                                                        title={markedRecordsCount > 0 ? 'Use Unmark all before bulk marking again' : `Mark all as ${option.label}`}
                                                         className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                                                     >
                                                         <span className={`h-2 w-2 rounded-full ${option.dot}`} />

@@ -8,6 +8,7 @@ import { ATTENDED_ATTENDANCE_STATUSES, COUNTED_ATTENDANCE_STATUSES, isAttendedAt
 import { getSlotType, scoreScheduleBySubjects } from '../utils/timetableSlots.js'
 import { buildViewCacheId, clearUserViewCache, readViewCache, writeViewCache } from '../utils/viewCache.js'
 import { unmarkAttendanceLogsAtomic } from '../utils/unmarkAttendance.js'
+import { markAllAttendanceAtomic } from '../utils/bulkAttendance.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -97,6 +98,19 @@ const UnmarkAllSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   semester: z.number().int().min(1).max(12),
   log_ids: z.array(z.string().min(1)).min(1).max(100),
+})
+
+const MarkAllSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  semester: z.number().int().min(1).max(12),
+  status: z.enum(['present', 'absent', 'approved_medical', 'cancelled']),
+  classes: z.array(z.object({
+    subject_id: z.string().min(1),
+    type: z.string().min(1).max(50),
+  })).min(1).max(100).superRefine((classes, ctx) => {
+    const identities = classes.map(item => `${item.subject_id}\u0000${item.type}`)
+    if (new Set(identities).size !== identities.length) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Duplicate scheduled class identity' })
+  }),
 })
 
 const EditLogSchema = z.object({
@@ -204,6 +218,35 @@ router.post('/mark', async (req: AuthRequest, res) => {
     if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'VALIDATION_ERROR', 400); return }
     console.error('[attendance/mark]', err)
     fail(res, 'Failed to mark attendance', 'SERVER_ERROR', 500)
+  }
+})
+
+// Bulk marking is intentionally all-or-nothing and is only allowed when the
+// selected date has no existing attendance records for this semester.
+router.post('/mark-all', async (req: AuthRequest, res) => {
+  try {
+    const body = MarkAllSchema.parse(req.body)
+    const userId = req.userId!
+    const result = await markAllAttendanceAtomic({
+      ...body,
+      userId,
+      ip: getClientIp(req),
+      userAgent: (req.headers['user-agent'] as string) || null,
+    })
+    await clearUserViewCache(userId).catch(() => {})
+    created(res, result)
+  } catch (err) {
+    if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'VALIDATION_ERROR', 400); return }
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'BULK_DATE_NOT_EMPTY') {
+      fail(res, 'Some records are already marked for this date. Use Unmark all before bulk marking.', 'BULK_DATE_NOT_EMPTY', 409)
+      return
+    }
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'BULK_CLASSES_INVALID') {
+      fail(res, 'Scheduled classes changed or are invalid. Reload the date and try again.', 'BULK_CLASSES_INVALID', 409)
+      return
+    }
+    console.error('[attendance/mark-all]', err)
+    fail(res, 'Failed to mark all attendance', 'SERVER_ERROR', 500)
   }
 })
 

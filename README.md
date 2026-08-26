@@ -82,6 +82,7 @@ Run the attendance backend test suite to verify DB connectivity, all attendance 
 cd api-node
 npx tsx scripts/test-attendance.ts
 npm run test:tracker-activity
+npm run test:bulk-attendance
 ```
 
 > All test data is created under a sentinel semester (`99`) with dates in year `2000` and is fully cleaned up after the run.
@@ -99,6 +100,7 @@ npm run build
 ## Attendance Workflow
 
 - Mark each scheduled attendance block individually, or use the three-dot **Mark all** menu for Present, Absent, Medical Leave, or Cancelled. **Unmark all** atomically clears only the exact Marked Records loaded for the selected date and semester. Substitution remains an individual marking action because it requires selecting a replacement subject.
+- Bulk marking is available only when the selected date has no marked records. If even one record exists, use **Unmark all** first; the API independently enforces the same rule and applies the complete bulk mark atomically.
 - Attendance controls remain locked until the selected date's Marked Records are verified. Failed or lost mutation responses trigger a server reload, and reconnecting automatically retries record loading; writes are never blindly repeated.
 - Consecutive periods of one subject share a mark, while a later occurrence after another timetable slot remains independently markable.
 - The dashboard shows official attendance and a conservative **Medical as absent** percentage for leaves that have not yet been accepted.

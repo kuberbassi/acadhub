@@ -11,6 +11,7 @@
     "lint": "eslint src/",
     "smoke:api": "node scripts/smoke-backend.mjs",
     "test:tracker-activity": "tsx scripts/test-tracker-activity.ts",
+    "test:bulk-attendance": "tsx scripts/test-bulk-attendance.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
