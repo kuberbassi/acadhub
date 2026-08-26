@@ -386,19 +386,21 @@ export const attendanceService = {
     updatePracticals: async (
         subjectId: string,
         data: { total?: number; completed?: number; hardcopy?: boolean }
-    ): Promise<void> => {
+    ): Promise<Subject> => {
 
-        await api.put(`/api/academic/subjects/${subjectId}`, { practicals: data });
+        const response = await api.put(`/api/academic/subjects/${subjectId}`, { practicals: data });
         clearDerivedCaches();
+        return response.data?.data?.subject;
     },
 
     updateAssignments: async (
         subjectId: string,
-        data: { total?: number; completed?: number }
-    ): Promise<void> => {
+        data: { total?: number; completed?: number; hardcopy?: boolean }
+    ): Promise<Subject> => {
 
-        await api.put(`/api/academic/subjects/${subjectId}`, { assignments: data });
+        const response = await api.put(`/api/academic/subjects/${subjectId}`, { assignments: data });
         clearDerivedCaches();
+        return response.data?.data?.subject;
     },
 
     // Timetable
@@ -541,8 +543,8 @@ export const attendanceService = {
     },
 
     // System logs
-    getSystemLogs: async (): Promise<SystemLog[]> => {
-        const response = await api.get('/api/profile/logs');
+    getSystemLogs: async (limit = 100): Promise<SystemLog[]> => {
+        const response = await api.get(`/api/profile/logs?limit=${limit}`);
         return response.data.data;
     },
 

@@ -192,8 +192,8 @@ router.post('/mark', async (req: AuthRequest, res) => {
       await applySubjectAttendanceDelta(subjectId, counters.total, counters.attended)
 
     const updatedSubject = await prisma.subject.findUnique({ where: { id: subjectId } })
+    await sysLog(req, userId, 'Attendance Marked', `Marked ${subject.name} as ${body.status} on ${markDate}`).catch(() => { })
     await clearUserViewCache(userId).catch(() => {})
-    void sysLog(req, userId, 'Attendance Marked', `Marked ${subject.name} as ${body.status} on ${markDate}`).catch(() => { })
 
     created(res, {
       log: { ...log, _id: log.id },
@@ -221,8 +221,8 @@ router.post('/unmark-all', async (req: AuthRequest, res) => {
       throw new Error('UNMARK_ALL_STALE')
     }
 
+    await sysLog(req, userId, 'Attendance Bulk Cleared', `Cleared ${result.deleted_count} attendance records on ${body.date}`).catch(() => {})
     await clearUserViewCache(userId).catch(() => {})
-    void sysLog(req, userId, 'Attendance Bulk Cleared', `Cleared ${result.deleted_count} attendance records on ${body.date}`).catch(() => {})
     ok(res, result)
   } catch (err) {
     if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'VALIDATION_ERROR', 400); return }
@@ -507,9 +507,8 @@ router.put('/logs/:logId', async (req: AuthRequest, res) => {
       await applySubjectAttendanceDelta(log.subject_id, after.total - before.total, after.attended - before.attended)
 
     const updatedSubject = await prisma.subject.findUnique({ where: { id: log.subject_id } })
+    await sysLog(req, userId, 'Attendance Edited', `Edited ${log.subject_name || 'subject'} to ${updatedLog.status} on ${updatedLog.date}`).catch(() => { })
     await clearUserViewCache(userId).catch(() => {})
-
-    void sysLog(req, userId, 'Attendance Edited', `Edited ${log.subject_name || 'subject'} to ${updatedLog.status} on ${updatedLog.date}`).catch(() => { })
 
     ok(res, { log: { ...updatedLog, _id: updatedLog.id }, subject: updatedSubject ? { ...updatedSubject, _id: updatedSubject.id } : null })
   } catch (err) {
@@ -543,9 +542,8 @@ router.delete('/logs/:logId', async (req: AuthRequest, res) => {
       await applySubjectAttendanceDelta(subjectId, -counters.total, -counters.attended)
 
     const updatedSubject = await prisma.subject.findUnique({ where: { id: subjectId } })
+    await sysLog(req, userId, 'Attendance Deleted', `Deleted ${log.subject_name} (${log.status}) on ${log.date}`).catch(() => { })
     await clearUserViewCache(userId).catch(() => {})
-
-    void sysLog(req, userId, 'Attendance Deleted', `Deleted ${log.subject_name} (${log.status}) on ${log.date}`).catch(() => { })
 
     ok(res, { message: 'Log deleted', subject: updatedSubject ? { ...updatedSubject, _id: updatedSubject.id } : null })
   } catch (err) {

@@ -5,6 +5,7 @@ import { prisma } from '../config/prisma.js'
 import { ok, created, fail } from '../utils/response.js'
 import { mergePreferredRecord } from '../utils/recordMerge.js'
 import { buildViewCacheId, clearUserViewCache, readViewCache, writeViewCache } from '../utils/viewCache.js'
+import { updateSubjectWithActivityAtomic } from '../utils/subjectActivity.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -14,7 +15,29 @@ const SemesterParamSchema = z.object({ semester: z.string().regex(/^\d+$/).trans
 async function sysLog(req: AuthRequest, user_id: string, action: string, description: string) {
     const ip = req.ip || req.socket?.remoteAddress || null
     const user_agent = (req.headers['user-agent'] as string) || null
-    await prisma.systemLog.create({ data: { user_id, action, description, ip, user_agent } }).catch(() => null)
+    return prisma.systemLog.create({ data: { user_id, action, description, ip, user_agent } })
+}
+
+type TrackerState = { total: number; completed: number; hardcopy: boolean }
+
+function trackerState(value: unknown, fallbackTotal: number): TrackerState {
+    const raw = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+    return {
+        total: typeof raw.total === 'number' ? raw.total : fallbackTotal,
+        completed: typeof raw.completed === 'number' ? raw.completed : 0,
+        hardcopy: raw.hardcopy === true,
+    }
+}
+
+function describeTrackerChange(label: 'Practical' | 'Assignment', before: TrackerState, after: TrackerState) {
+    const changes: string[] = []
+    if (before.completed !== after.completed || before.total !== after.total) {
+        changes.push(`progress ${before.completed}/${before.total} to ${after.completed}/${after.total}`)
+    }
+    if (before.hardcopy !== after.hardcopy) {
+        changes.push(`submission ${before.hardcopy ? 'submitted' : 'unsubmitted'} to ${after.hardcopy ? 'submitted' : 'unsubmitted'}`)
+    }
+    return changes.length ? `${label}: ${changes.join(', ')}` : null
 }
 
 // ─── Subjects ────────────────────────────────────────────────────────────────
@@ -47,10 +70,10 @@ const UpdateSubjectSchema = z.object({
     attended: z.number().int().min(0).optional(),
     total: z.number().int().min(0).optional(),
     syllabus: z.string().optional(),
-    practicals: z.object({ total: z.number().optional(), completed: z.number().optional(), hardcopy: z.boolean().optional() }).optional(),
-    assignments: z.object({ total: z.number().optional(), completed: z.number().optional(), hardcopy: z.boolean().optional() }).optional(),
-    practical_total: z.number().optional(),
-    assignment_total: z.number().optional(),
+    practicals: z.object({ total: z.number().int().min(0).optional(), completed: z.number().int().min(0).optional(), hardcopy: z.boolean().optional() }).optional(),
+    assignments: z.object({ total: z.number().int().min(0).optional(), completed: z.number().int().min(0).optional(), hardcopy: z.boolean().optional() }).optional(),
+    practical_total: z.number().int().min(0).optional(),
+    assignment_total: z.number().int().min(0).optional(),
 }).passthrough()
 
 const SemesterQuerySchema = z.object({
@@ -135,7 +158,7 @@ router.post('/subjects', async (req: AuthRequest, res) => {
                 assignments: { total: body.assignment_total, completed: 0, hardcopy: false },
             },
         })
-        sysLog(req, userId, 'Subject Added', `Added '${body.name}' to semester ${body.semester}`).catch(() => { })
+        await sysLog(req, userId, 'Subject Added', `Added '${body.name}' to semester ${body.semester}`).catch(() => { })
         await clearUserViewCache(userId).catch(() => { })
         created(res, { _id: subject.id, ...subject })
     } catch (err) {
@@ -196,11 +219,58 @@ async function handleUpdateSubject(req: AuthRequest, res: any) {
             updateData['assignments'] = cur
         }
 
-        await prisma.subject.update({ where: { id: subjectId }, data: updateData })
+        const beforePracticals = trackerState(existing.practicals, 10)
+        const beforeAssignments = trackerState(existing.assignments, 4)
+        const afterPracticals = trackerState(updateData.practicals ?? existing.practicals, 10)
+        const afterAssignments = trackerState(updateData.assignments ?? existing.assignments, 4)
+        if (afterPracticals.completed > afterPracticals.total || afterAssignments.completed > afterAssignments.total) {
+            fail(res, 'Completed work cannot exceed the configured total', 'INVALID_TRACKER_STATE', 400)
+            return
+        }
+        const trackerChanges = [
+            describeTrackerChange('Practical', beforePracticals, afterPracticals),
+            describeTrackerChange('Assignment', beforeAssignments, afterAssignments),
+        ].filter((value): value is string => Boolean(value))
+        const ordinaryChanges = allowedFields.filter(key => key in updateData && JSON.stringify((existing as any)[key]) !== JSON.stringify(updateData[key]))
+
+        if (trackerChanges.length === 0 && ordinaryChanges.length === 0) {
+            ok(res, { message: 'No changes needed', subject: { ...existing, _id: existing.id }, activity_id: null, unchanged: true })
+            return
+        }
+
+        const action = trackerChanges.length > 0 && ordinaryChanges.length === 0
+            ? (trackerChanges.some(change => change.includes('submission')) ? 'Submission Status Updated' : 'Tracker Progress Updated')
+            : 'Subject Updated'
+        const descriptionParts = [
+            ...trackerChanges,
+            ...(ordinaryChanges.length ? [`Fields: ${ordinaryChanges.join(', ')}`] : []),
+        ]
+        const description = `${existing.name} — ${descriptionParts.join('; ')}`
+        const ip = req.ip || req.socket?.remoteAddress || null
+        const user_agent = (req.headers['user-agent'] as string) || null
+        const [updatedSubject, activity] = await updateSubjectWithActivityAtomic({
+            subjectId,
+            expectedUpdatedAt: existing.updated_at,
+            updateData,
+            userId,
+            action,
+            description,
+            ip,
+            userAgent: user_agent,
+        })
         await clearUserViewCache(userId).catch(() => { })
-        ok(res, { message: 'Subject updated' })
+        ok(res, {
+            message: 'Subject updated',
+            subject: { ...updatedSubject, _id: updatedSubject.id },
+            activity_id: activity.id,
+            unchanged: false,
+        })
     } catch (err) {
         if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'INVALID_PARAMS'); return }
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
+            fail(res, 'This subject changed on another device. Refresh and try again.', 'STALE_SUBJECT', 409)
+            return
+        }
         console.error('[academic/subjects/:id PUT]', err)
         fail(res, 'Failed to update subject', 'UPDATE_FAILED', 500)
     }
@@ -218,7 +288,7 @@ router.delete('/subjects/:id', async (req: AuthRequest, res) => {
         if (!subject) { fail(res, 'Subject not found', 'NOT_FOUND', 404); return }
         // onDelete: Cascade in schema auto-deletes attendance_logs
         await prisma.subject.delete({ where: { id: subjectId } })
-        sysLog(req, userId, 'Subject Deleted', `Deleted subject '${subject.name}'`).catch(() => { })
+        await sysLog(req, userId, 'Subject Deleted', `Deleted subject '${subject.name}'`).catch(() => { })
         await clearUserViewCache(userId).catch(() => { })
         ok(res, { message: 'Subject deleted' })
     } catch (err) {

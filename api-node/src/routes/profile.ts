@@ -119,7 +119,7 @@ router.put('/', async (req: AuthRequest, res) => {
     }
 
     invalidateAuthCache(req.headers.authorization?.slice(7))
-    sysLog(req, userId, 'Profile Updated', 'User updated their profile information.').catch(() => { })
+    await sysLog(req, userId, 'Profile Updated', 'User updated their profile information.').catch(() => { })
     await clearUserViewCache(userId).catch(() => { })
     ok(res, { message: 'Profile updated' })
   } catch (err) {
@@ -187,7 +187,8 @@ router.post('/upload_pfp', upload.single('file'), async (req: AuthRequest, res) 
 
     await prisma.user.update({ where: { id: userId }, data: { picture: pfpUrl } })
     invalidateAuthCache(req.headers.authorization?.slice(7))
-    sysLog(req, userId, 'PFP Updated', 'User uploaded a new profile picture.').catch(() => { })
+    await sysLog(req, userId, 'PFP Updated', 'User uploaded a new profile picture.').catch(() => { })
+    await clearUserViewCache(userId).catch(() => { })
     ok(res, { url: pfpUrl })
   } catch (err) {
     console.error('[profile/upload_pfp]', err)
@@ -250,9 +251,8 @@ router.post('/preferences', async (req: AuthRequest, res) => {
     }
 
     invalidateAuthCache(req.headers.authorization?.slice(7))
-    sysLog(req, userId, 'Preferences Updated', `Updated preferences: ${Object.keys(data).join(', ')}`).catch(() => { })
+    await sysLog(req, userId, 'Preferences Updated', `Updated preferences: ${Object.keys(data).join(', ')}`).catch(() => { })
 
-    await clearUserViewCache(userId).catch(() => { })
     await clearUserViewCache(userId).catch(() => { })
     ok(res, { message: 'Preferences saved' })
   } catch (err) {
@@ -283,7 +283,7 @@ router.post('/sync-thresholds', async (req: AuthRequest, res) => {
       modified += 1
     }
 
-    sysLog(req, userId, 'Thresholds Synced', `Updated ${modified} subjects to ${threshold}% target${semester ? ` (semester ${semester})` : ''}`).catch(() => { })
+    await sysLog(req, userId, 'Thresholds Synced', `Updated ${modified} subjects to ${threshold}% target${semester ? ` (semester ${semester})` : ''}`).catch(() => { })
     await clearUserViewCache(userId).catch(() => { })
     ok(res, { message: `Updated ${modified} subjects`, threshold, modified })
   } catch (err) {
@@ -313,20 +313,26 @@ router.post('/biometric/register', async (req: AuthRequest, res) => {
 
 // â”€â”€â”€ System Logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+const ActivityLogsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional().default(100),
+})
+
 router.get('/logs', async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
-    const cacheId = buildViewCacheId('system_logs', {})
+    const { limit } = ActivityLogsQuerySchema.parse(req.query)
+    const cacheId = buildViewCacheId('system_logs', { limit })
     const cached = await readViewCache<any>(userId, cacheId)
     if (cached) { ok(res, cached, 200, 0); return }
     const logs = await prisma.systemLog.findMany({
       where: { user_id: userId },
       orderBy: { timestamp: 'desc' },
-      take: 50,
+      take: limit,
     })
     ok(res, logs, 200, 0)
     void writeViewCache(userId, cacheId, logs, 60_000).catch(() => {})
   } catch (err) {
+    if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'VALIDATION_ERROR', 400); return }
     console.error('[profile/logs]', err)
     fail(res, 'Failed to fetch logs', 'FETCH_FAILED', 500)
   }

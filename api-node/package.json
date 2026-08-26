@@ -10,6 +10,7 @@
     "start": "node dist/index.js",
     "lint": "eslint src/",
     "smoke:api": "node scripts/smoke-backend.mjs",
+    "test:tracker-activity": "tsx scripts/test-tracker-activity.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

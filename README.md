@@ -81,9 +81,12 @@ Run the attendance backend test suite to verify DB connectivity, all attendance 
 ```bash
 cd api-node
 npx tsx scripts/test-attendance.ts
+npm run test:tracker-activity
 ```
 
 > All test data is created under a sentinel semester (`99`) with dates in year `2000` and is fully cleaned up after the run.
+
+The tracker activity test performs a real submitted-to-unsubmitted database round trip. It verifies that one subject row is updated, each committed transition has a unique server-timestamped event, and a stale concurrent write creates neither a state change nor a duplicate activity row.
 
 For a non-mutating production build check from the repository root:
 

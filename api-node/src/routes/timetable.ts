@@ -240,8 +240,8 @@ router.post('/', async (req: AuthRequest, res) => {
     } else {
       await prisma.timetable.create({ data: { user_id: userId, semester, schedule } })
     }
+    await sysLog(req, userId, 'Schedule Updated', `User updated timetable for Semester ${semester}.`).catch(() => { })
     await clearUserViewCache(userId).catch(() => {})
-    void sysLog(req, userId, 'Schedule Updated', `User updated timetable for Semester ${semester}.`).catch(() => { })
     ok(res, { message: 'Timetable updated' })
   } catch (err) {
     console.error('[timetable POST]', err)

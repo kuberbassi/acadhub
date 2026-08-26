@@ -214,6 +214,10 @@ Tracks user logs and system heartbeats.
 | `user_agent` | `String?` | | Client user agent registry. |
 | `timestamp` | `DateTime` | `@default(now())` | Activity occurrence date/time. |
 
+Settings shows the latest 100 activity events with second-level local display time and the full unique event ID. Users can explicitly refresh the history; a failed refresh preserves the last successfully loaded records and reports the failure instead of presenting an empty history.
+
+Practical and assignment tracker changes update the existing `Subject` JSON and create the corresponding `SystemLog` in one atomic PostgreSQL statement. Submitted-to-unsubmitted transitions therefore do not create duplicate subject records. A compare-on-`updated_at` guard rejects stale concurrent clients with HTTP `409`; because the log shares the statement, a rejected state change cannot leave behind a false activity event. Identical no-op updates return the authoritative subject without creating an activity record. The server generates a unique event ID and PostgreSQL generates its timestamp.
+
 ---
 
 ## 3. Key Architectural Workflows

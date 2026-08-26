@@ -20,10 +20,12 @@ export interface User {
 }
 
 export interface SystemLog {
+    id: string;
     action: string;
     description: string;
     timestamp: string | { $date: string };
-    user_email: string;
+    ip?: string | null;
+    user_agent?: string | null;
 }
 
 export interface AttendanceRecord {

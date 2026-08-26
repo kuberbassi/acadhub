@@ -50,6 +50,7 @@ const Practicals: React.FC = () => {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
     const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+    const [processingTrackers, setProcessingTrackers] = useState<Set<string>>(new Set());
 
     usePageMeta({
         title: 'Assignments & Practicals | Semester',
@@ -73,6 +74,9 @@ const Practicals: React.FC = () => {
 
     const handleUpdate = async (id: string | any, updates: { total?: number; completed?: number; hardcopy?: boolean }) => {
         const subjectId = String(id);
+        const processingKey = `${subjectId}:practicals`;
+        if (processingTrackers.has(processingKey)) return;
+        setProcessingTrackers(prev => new Set(prev).add(processingKey));
         const previous = [...subjects];
         setSubjects((prev: Subject[]) => prev.map(sub => {
             const subId = String(sub._id || (sub as any).id);
@@ -90,16 +94,29 @@ const Practicals: React.FC = () => {
             return sub;
         }));
         try {
-            await attendanceService.updatePracticals(subjectId, updates);
+            const updated = await attendanceService.updatePracticals(subjectId, updates);
+            if (updated) {
+                setSubjects(prev => prev.map(subject => String(subject._id || (subject as any).id) === subjectId ? updated : subject));
+            }
             showToast('success', 'Records Updated');
         } catch {
             setSubjects(previous);
-            showToast('error', 'Update Error');
+            await loadData();
+            showToast('error', 'Update response was not confirmed. Latest records were reloaded.');
+        } finally {
+            setProcessingTrackers(prev => {
+                const next = new Set(prev);
+                next.delete(processingKey);
+                return next;
+            });
         }
     };
 
     const handleAssignmentUpdate = async (id: string | any, updates: { total?: number; completed?: number; hardcopy?: boolean }) => {
         const subjectId = String(id);
+        const processingKey = `${subjectId}:assignments`;
+        if (processingTrackers.has(processingKey)) return;
+        setProcessingTrackers(prev => new Set(prev).add(processingKey));
         const previous = [...subjects];
         setSubjects((prev: Subject[]) => prev.map(sub => {
             const subId = String(sub._id || (sub as any).id);
@@ -117,11 +134,21 @@ const Practicals: React.FC = () => {
             return sub;
         }));
         try {
-            await attendanceService.updateAssignments(subjectId, updates);
+            const updated = await attendanceService.updateAssignments(subjectId, updates);
+            if (updated) {
+                setSubjects(prev => prev.map(subject => String(subject._id || (subject as any).id) === subjectId ? updated : subject));
+            }
             showToast('success', 'Assignments Updated');
         } catch {
             setSubjects(previous);
-            showToast('error', 'Update Error');
+            await loadData();
+            showToast('error', 'Update response was not confirmed. Latest records were reloaded.');
+        } finally {
+            setProcessingTrackers(prev => {
+                const next = new Set(prev);
+                next.delete(processingKey);
+                return next;
+            });
         }
     };
 
@@ -180,6 +207,8 @@ const Practicals: React.FC = () => {
                             const hasAssignments = cats.includes('Assignment');
                             const p = subject.practicals || { total: 10, completed: 0, hardcopy: false };
                             const a = subject.assignments || { total: 4, completed: 0, hardcopy: false };
+                            const practicalsBusy = processingTrackers.has(`${String(subject._id)}:practicals`);
+                            const assignmentsBusy = processingTrackers.has(`${String(subject._id)}:assignments`);
 
                             let total = 0; let done = 0;
                             if (hasPracticals) { total += p.total; done += p.completed; }
@@ -215,14 +244,14 @@ const Practicals: React.FC = () => {
                                                             <span className="text-xs font-bold text-on-surface font-mono">{p.completed}/{p.total}</span>
                                                         </div>
                                                         <div className="flex gap-2">
-                                                            <button disabled={p.completed <= 0} onClick={() => handleUpdate(subject._id, { completed: p.completed - 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
+                                                            <button disabled={practicalsBusy || p.completed <= 0} onClick={() => handleUpdate(subject._id, { completed: p.completed - 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
                                                                 <Minus size={11} />
                                                             </button>
-                                                            <button disabled={p.completed >= p.total} onClick={() => handleUpdate(subject._id, { completed: p.completed + 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
+                                                            <button disabled={practicalsBusy || p.completed >= p.total} onClick={() => handleUpdate(subject._id, { completed: p.completed + 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
                                                                 <Plus size={11} />
                                                             </button>
                                                         </div>
-                                                        <button onClick={() => handleUpdate(subject._id, { hardcopy: !p.hardcopy })} className={`w-full py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${p.hardcopy ? 'bg-emerald-100 border border-emerald-300 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 font-bold' : 'bg-surface-container/30 border border-outline text-on-surface-variant/60 hover:border-outline-variant hover:text-on-surface hover:bg-surface-container'}`}>
+                                                        <button disabled={practicalsBusy} onClick={() => handleUpdate(subject._id, { hardcopy: !p.hardcopy })} className={`w-full py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-wait disabled:opacity-60 ${p.hardcopy ? 'bg-emerald-100 border border-emerald-300 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 font-bold' : 'bg-surface-container/30 border border-outline text-on-surface-variant/60 hover:border-outline-variant hover:text-on-surface hover:bg-surface-container'}`}>
                                                             {p.hardcopy ? <><CheckCircle size={11} /> Submitted</> : <><Target size={11} /> Mark Submitted</>}
                                                         </button>
                                                     </div>
@@ -237,14 +266,14 @@ const Practicals: React.FC = () => {
                                                             <span className="text-xs font-bold text-on-surface font-mono">{a.completed}/{a.total}</span>
                                                         </div>
                                                         <div className="flex gap-2">
-                                                            <button disabled={a.completed <= 0} onClick={() => handleAssignmentUpdate(subject._id, { completed: a.completed - 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
+                                                            <button disabled={assignmentsBusy || a.completed <= 0} onClick={() => handleAssignmentUpdate(subject._id, { completed: a.completed - 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
                                                                 <Minus size={11} />
                                                             </button>
-                                                            <button disabled={a.completed >= a.total} onClick={() => handleAssignmentUpdate(subject._id, { completed: a.completed + 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
+                                                            <button disabled={assignmentsBusy || a.completed >= a.total} onClick={() => handleAssignmentUpdate(subject._id, { completed: a.completed + 1 })} className="flex-1 h-7 rounded-md bg-surface-container/50 border border-outline text-on-surface hover:bg-surface-container disabled:opacity-30 transition-all flex items-center justify-center cursor-pointer">
                                                                 <Plus size={11} />
                                                             </button>
                                                         </div>
-                                                        <button onClick={() => handleAssignmentUpdate(subject._id, { hardcopy: !a.hardcopy })} className={`w-full py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${a.hardcopy ? 'bg-emerald-100 border border-emerald-300 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 font-bold' : 'bg-surface-container/30 border border-outline text-on-surface-variant/60 hover:border-outline-variant hover:text-on-surface hover:bg-surface-container'}`}>
+                                                        <button disabled={assignmentsBusy} onClick={() => handleAssignmentUpdate(subject._id, { hardcopy: !a.hardcopy })} className={`w-full py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-wait disabled:opacity-60 ${a.hardcopy ? 'bg-emerald-100 border border-emerald-300 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 font-bold' : 'bg-surface-container/30 border border-outline text-on-surface-variant/60 hover:border-outline-variant hover:text-on-surface hover:bg-surface-container'}`}>
                                                             {a.hardcopy ? <><CheckCircle size={11} /> Submitted</> : <><Target size={11} /> Mark Submitted</>}
                                                         </button>
                                                     </div>
