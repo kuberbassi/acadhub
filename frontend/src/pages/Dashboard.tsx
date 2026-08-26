@@ -305,6 +305,8 @@ const Dashboard: React.FC = () => {
     const subjectCount = dashboardData?.total_subjects || subjects.length || 0;
     const totalAttended = subjects.reduce((sum, subject) => sum + (subject.attended || 0), 0);
     const safeBunks = dashboardData?.summary?.safe_bunks_remaining ?? 0;
+    const targetDelta = att - targetThreshold;
+    const hasAttendanceData = totalClasses > 0;
 
     const sortSubs = (subs: any[]) => {
         if (!subs) return [];
@@ -461,7 +463,44 @@ const Dashboard: React.FC = () => {
                                     <Target size={13} className="text-on-surface-variant/40" />
                                 </div>
                                 
-                                <div className="space-y-4 my-2">
+                                <div className="rounded-lg border border-outline/50 bg-surface-container/25 p-4 mb-5">
+                                    <div className="flex items-end justify-between gap-4">
+                                        <div>
+                                            <p className="text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/40">Minimum Goal</p>
+                                            <p className="text-2xl font-black tracking-tight text-on-surface">{targetThreshold}%</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/40">Current</p>
+                                            <p className={`text-base font-bold ${hasAttendanceData && targetDelta < 0 ? 'text-red-500' : 'text-on-surface'}`}>
+                                                {hasAttendanceData ? `${att.toFixed(1)}%` : '—'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="relative mt-3 h-1.5 rounded-full bg-on-surface/5">
+                                        <div
+                                            className={`h-full rounded-full ${hasAttendanceData && targetDelta < 0 ? 'bg-red-500' : 'bg-on-surface'}`}
+                                            style={{ width: `${hasAttendanceData ? Math.min(100, Math.max(0, att)) : 0}%` }}
+                                        />
+                                        <span
+                                            className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-primary ring-2 ring-surface"
+                                            style={{ left: `${Math.min(100, Math.max(0, targetThreshold))}%` }}
+                                            title={`${targetThreshold}% target`}
+                                        />
+                                    </div>
+                                    <div className="mt-2 flex items-center justify-between gap-3 text-[9px] font-semibold">
+                                        <span className="text-on-surface-variant/40">0%</span>
+                                        <span className={hasAttendanceData && targetDelta < 0 ? 'text-red-500' : 'text-on-surface-variant/60'}>
+                                            {!hasAttendanceData
+                                                ? 'No classes recorded yet'
+                                                : targetDelta >= 0
+                                                    ? `${targetDelta.toFixed(1)} points above target`
+                                                    : `${Math.abs(targetDelta).toFixed(1)} points below target`}
+                                        </span>
+                                        <span className="text-on-surface-variant/40">100%</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 my-2 border-t border-outline/30 pt-4">
                                     <div>
                                         <p className="text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/40">Student Name</p>
                                         <p className="text-sm font-bold text-on-surface">{user?.name || 'Student'}</p>
