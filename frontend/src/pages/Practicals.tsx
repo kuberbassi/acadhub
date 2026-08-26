@@ -136,7 +136,7 @@ const Practicals: React.FC = () => {
     const categories = ['All', 'Theory', 'Practical', 'Assignment'];
 
     return (
-        <div className="max-w-6xl mx-auto pb-24 px-4 select-none">
+        <div className="max-w-6xl mx-auto pb-24 select-none">
             {/* Page Header */}
             <div className="mb-8">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/40 mb-2">

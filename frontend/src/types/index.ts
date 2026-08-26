@@ -71,6 +71,8 @@ export interface Subject {
 
 export interface DashboardData {
     overall_attendance: number;
+    attendance_without_medical?: number;
+    medical_leave_count?: number;
     total_classes: number;
     total_subjects: number;
     attendance_status: string;

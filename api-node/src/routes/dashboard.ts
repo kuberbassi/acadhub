@@ -26,7 +26,7 @@ router.get('/data', async (req: AuthRequest, res) => {
       }
     }
 
-    const [subjects, recentLogs] = await Promise.all([
+    const [subjects, recentLogs, medicalLeaveCount] = await Promise.all([
       prisma.subject.findMany({
         where: { user_id: userId, semester },
         orderBy: { name: 'asc' },
@@ -35,6 +35,16 @@ router.get('/data', async (req: AuthRequest, res) => {
         where: { user_id: userId, semester },
         orderBy: [{ date: 'desc' }, { timestamp: 'desc' }],
         take: 30,
+      }),
+      prisma.attendanceLog.count({
+        where: {
+          user_id: userId,
+          status: { in: ['medical', 'approved_medical'] },
+          OR: [
+            { semester },
+            { semester: null, subject: { is: { semester } } },
+          ],
+        },
       }),
     ])
     const resultRows: any[] = []
@@ -52,9 +62,15 @@ router.get('/data', async (req: AuthRequest, res) => {
     })
 
     const cgpaCalc = resultRows.length ? GradeCalculator.calculateCGPA(resultRows.map((row: any) => row.subjects as Array<Record<string, unknown>>)) : { cgpa: 0 }
+    const attendanceWithoutMedical = AttendanceCalculator.calculatePercentage(
+      Math.max(0, summary.total_attended - medicalLeaveCount),
+      summary.total_classes,
+    )
 
     const payload = {
       overall_attendance: summary.overall_percentage,
+      attendance_without_medical: attendanceWithoutMedical,
+      medical_leave_count: medicalLeaveCount,
       total_subjects: subjects.length,
       subjects: enriched,
       recent_logs: recentLogs,

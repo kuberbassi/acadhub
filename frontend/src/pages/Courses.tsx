@@ -9,6 +9,7 @@ import Select from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
 import { attendanceService } from '@/services/attendance.service';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { formatLocalDate } from '@/lib/date';
 
 interface Course {
     _id?: string;
@@ -49,7 +50,7 @@ const normalizeCourse = (raw: RawCourse): Course => ({
     platform: (raw?.platform || raw?.provider || 'custom') as Course['platform'],
     url: String(raw?.url || ''),
     progress: clampProgress(raw?.progress ?? raw?.percentage ?? 0),
-    enrolledDate: String(raw?.enrolledDate || raw?.created_at || new Date().toISOString().split('T')[0]).slice(0, 10),
+    enrolledDate: String(raw?.enrolledDate || raw?.created_at || formatLocalDate()).slice(0, 10),
     targetCompletionDate: raw?.targetCompletionDate ? String(raw.targetCompletionDate).slice(0, 10) : undefined,
     instructor: raw?.instructor ? String(raw.instructor) : undefined,
     notes: raw?.notes ? String(raw.notes) : undefined,
@@ -118,7 +119,7 @@ const Courses: React.FC = () => {
     const [editingCourse, setEditingCourse] = useState<Course | null>(null);
     const [formData, setFormData] = useState<Partial<Course>>({
         title: '', platform: 'coursera', url: '', progress: 0,
-        enrolledDate: new Date().toISOString().split('T')[0],
+        enrolledDate: formatLocalDate(),
         instructor: '', notes: ''
     });
 
@@ -145,7 +146,7 @@ const Courses: React.FC = () => {
         setEditingCourse(null);
         setFormData({
             title: '', platform: 'coursera', url: '', progress: 0,
-            enrolledDate: new Date().toISOString().split('T')[0],
+            enrolledDate: formatLocalDate(),
             instructor: '', notes: ''
         });
         setIsModalOpen(true);

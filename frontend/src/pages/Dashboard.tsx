@@ -294,6 +294,8 @@ const Dashboard: React.FC = () => {
     };
 
     const att = dashboardData?.overall_attendance || 0;
+    const attendanceWithoutMedical = dashboardData?.attendance_without_medical ?? att;
+    const medicalLeaveCount = dashboardData?.medical_leave_count ?? 0;
     const subjects = dashboardData?.subjects || [];
     const totalClasses = subjects.reduce((a, c) => a + (c.total || 0), 0) || 0;
     const safeCount = subjects.filter(s => (s.attendance_percentage || 0) >= targetThreshold).length || 0;
@@ -412,6 +414,12 @@ const Dashboard: React.FC = () => {
                                 <div>
                                     <p className="text-5xl md:text-6xl font-black tracking-tighter text-on-surface leading-none">{att.toFixed(1)}%</p>
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/40 mt-3">Overall Conducted Classes</p>
+                                    <div className="mt-3 inline-flex items-baseline gap-1.5 rounded-md border border-outline/50 bg-surface-container/50 px-2 py-1">
+                                        <span className="text-xs font-black text-on-surface">{attendanceWithoutMedical.toFixed(1)}%</span>
+                                        <span className="text-[8px] font-bold uppercase tracking-wider text-on-surface-variant/50">
+                                            Medical as absent{medicalLeaveCount > 0 ? ` · ${medicalLeaveCount}` : ''}
+                                        </span>
+                                    </div>
                                 </div>
                                 
                                 <div className="w-full space-y-4">

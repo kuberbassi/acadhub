@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useSemester } from '@/contexts/SemesterContext';
 import { attendanceService } from '@/services/attendance.service';
 import api from '@/services/api';
+import { formatLocalDate } from '@/lib/date';
 import { Check, X, MoreHorizontal, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
@@ -29,6 +30,9 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
     const [allSubjects, setAllSubjects] = useState<any[]>([]);
     const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
     const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+    const [isMarkAllOpen, setIsMarkAllOpen] = useState(false);
+    const [isMarkingAll, setIsMarkingAll] = useState(false);
+    const markAllRef = React.useRef<HTMLDivElement>(null);
 
     const debounceTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const debouncedOnSuccess = React.useCallback(() => {
@@ -51,10 +55,21 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         }
     }, [isOpen, defaultDate]);
 
+    useEffect(() => {
+        if (!isMarkAllOpen) return;
+        const closeMenu = (event: MouseEvent) => {
+            if (markAllRef.current && !markAllRef.current.contains(event.target as Node)) {
+                setIsMarkAllOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', closeMenu);
+        return () => document.removeEventListener('mousedown', closeMenu);
+    }, [isMarkAllOpen]);
+
     // Instantly sync our local (optimistic & fetched) logs to the parent Calendar view
     useEffect(() => {
         if (onLogsUpdate && selectedDate) {
-            const dateStr = getDateStr(selectedDate);
+            const dateStr = formatLocalDate(selectedDate);
             onLogsUpdate(dateStr, attendanceLogs);
         }
     }, [attendanceLogs, selectedDate, onLogsUpdate]);
@@ -63,10 +78,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         if (!silent) setLoading(true);
         try {
             // Fix timezone issue: Avoid toISOString() which shifts day for regions like India
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`;
+            const dateStr = formatLocalDate(date);
 
             const [scheduled, subjects] = await Promise.all([
                 attendanceService.getClassesForDate(dateStr, currentSemester),
@@ -91,16 +103,9 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         }
     };
 
-    const getDateStr = (date: Date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
     const fetchAttendanceLogs = async (date: Date) => {
         try {
-            const dateStr = getDateStr(date);
+            const dateStr = formatLocalDate(date);
             const response = await api.get(`/api/attendance/logs?date=${dateStr}&limit=100&semester=${currentSemester}`);
 
             // Backend returns success_response({"logs": [...], ...}) 
@@ -187,7 +192,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         const subjectId = String(subject?._id || subject?.id || subject?.subject_id || '');
         if (processingIds.has(subjectId)) return;
         setProcessingIds(prev => new Set(prev).add(subjectId));
-        const dateStr = getDateStr(selectedDate);
+        const dateStr = formatLocalDate(selectedDate);
         const snapshot = applyOptimisticMark(subject, status, dateStr);
         try {
             let res;
@@ -196,6 +201,9 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                 showToast('success', `Updated to ${status}`);
             } else {
                 res = await attendanceService.markAttendance(subjectId, status, dateStr, undefined, undefined, currentSemester, subject.attendance_type);
+                if (res?.duplicate && res?.log?._id && res.log.status !== status) {
+                    res = await attendanceService.editAttendance(String(res.log._id), status, undefined, dateStr);
+                }
                 showToast('success', `Marked ${status}`);
             }
             if (res?.log?._id) {
@@ -214,6 +222,64 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                 next.delete(subjectId);
                 return next;
             });
+        }
+    };
+
+    const markAllScheduled = async (status: 'present' | 'absent' | 'approved_medical' | 'cancelled') => {
+        if (isMarkingAll || scheduledClasses.length === 0) return;
+
+        setIsMarkAllOpen(false);
+        setIsMarkingAll(true);
+        const dateStr = formatLocalDate(selectedDate);
+        const classes = groupConsecutiveClasses(scheduledClasses).map(subject =>
+            subject.isMerged ? subject.originalClasses[0] : subject
+        );
+
+        try {
+            let failed = 0;
+            for (const subject of classes) {
+                const subjectId = String(subject?._id || subject?.id || subject?.subject_id || '');
+                try {
+                    if (!subjectId) throw new Error('Scheduled class has no subject ID');
+
+                    if (subject.log_id && !String(subject.log_id).startsWith('optimistic-')) {
+                        await attendanceService.editAttendance(String(subject.log_id), status, undefined, dateStr);
+                        continue;
+                    }
+
+                    const result = await attendanceService.markAttendance(
+                        subjectId,
+                        status,
+                        dateStr,
+                        undefined,
+                        undefined,
+                        currentSemester,
+                        String(subject.attendance_type || subject.type || 'Lecture')
+                    );
+
+                    // The create endpoint returns the existing block on a uniqueness race.
+                    // Explicitly edit it when its stored status differs from the bulk choice.
+                    if (result?.duplicate && result?.log?._id && result.log.status !== status) {
+                        await attendanceService.editAttendance(String(result.log._id), status, undefined, dateStr);
+                    }
+                } catch {
+                    failed += 1;
+                }
+            }
+
+            await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]);
+            if (failed > 0) {
+                showToast('error', `${failed} of ${classes.length} classes could not be updated`);
+            } else {
+                const label = status === 'approved_medical' ? 'medical leave' : status;
+                showToast('success', `All scheduled classes marked ${label}`);
+            }
+            debouncedOnSuccess();
+        } catch (error: any) {
+            await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]);
+            showToast('error', error.response?.data?.error || 'Failed to mark all classes');
+        } finally {
+            setIsMarkingAll(false);
         }
     };
 
@@ -260,7 +326,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         if (processingIds.has(subjectId)) return;
         
         try {
-            const dateStr = getDateStr(selectedDate);
+            const dateStr = formatLocalDate(selectedDate);
             // If substituted, ensure we selected a substitute subject
             if (detailStatus === 'substituted' && !detailSubstitutedBy) {
                 showToast('error', 'Please select the substituting subject');
@@ -282,6 +348,18 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                     subjectId, detailStatus, dateStr, detailNotes,
                     detailStatus === 'substituted' ? detailSubstitutedBy : undefined, currentSemester, subject.attendance_type
                 );
+                if (res?.duplicate && res?.log?._id) {
+                    const existingLogId = String(res.log._id);
+                    if (detailStatus === 'substituted') {
+                        await attendanceService.deleteAttendance(existingLogId);
+                        res = await attendanceService.markAttendance(
+                            subjectId, detailStatus, dateStr, detailNotes,
+                            detailSubstitutedBy, currentSemester, subject.attendance_type
+                        );
+                    } else if (res.log.status !== detailStatus) {
+                        res = await attendanceService.editAttendance(existingLogId, detailStatus, detailNotes, dateStr);
+                    }
+                }
                 showToast('success', 'Attendance marked successfully');
             }
 
@@ -375,7 +453,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                         <input
                             type="date"
                             className="bg-transparent border-none p-0 text-on-surface font-sans font-medium text-xs focus:ring-0 w-full"
-                            value={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`}
+                            value={formatLocalDate(selectedDate)}
                             onChange={handleDateChange}
                         />
                     </div>
@@ -389,9 +467,47 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                     <div className="space-y-5">
                         {/* Scheduled List */}
                         <div>
-                            <h3 className="text-[10px] font-bold text-on-surface-variant/50 mb-2.5 uppercase tracking-wider px-1">Scheduled Classes</h3>
+                            <div className="h-7 mb-2.5 px-1 flex items-center justify-between">
+                                <h3 className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">Scheduled Classes</h3>
+                                {scheduledClasses.length > 0 && (
+                                    <div ref={markAllRef} className="relative h-7">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsMarkAllOpen(open => !open)}
+                                            disabled={isMarkingAll}
+                                            aria-label="Mark all scheduled classes"
+                                            aria-expanded={isMarkAllOpen}
+                                            className="h-7 w-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high disabled:opacity-50 transition-colors cursor-pointer"
+                                            title="Mark all scheduled classes"
+                                        >
+                                            {isMarkingAll ? <LoadingSpinner size="sm" /> : <MoreHorizontal size={15} />}
+                                        </button>
+                                        {isMarkAllOpen && (
+                                            <div className="absolute right-0 top-8 z-[70] w-44 overflow-hidden rounded-xl border border-outline bg-surface p-1.5 shadow-xl">
+                                                <div className="px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/50">Mark all as</div>
+                                                {[
+                                                    { status: 'present', label: 'Present', dot: 'bg-green-500' },
+                                                    { status: 'absent', label: 'Absent', dot: 'bg-red-500' },
+                                                    { status: 'approved_medical', label: 'Medical Leave', dot: 'bg-blue-500' },
+                                                    { status: 'cancelled', label: 'Cancelled', dot: 'bg-slate-400' },
+                                                ].map(option => (
+                                                    <button
+                                                        key={option.status}
+                                                        type="button"
+                                                        onClick={() => markAllScheduled(option.status as 'present' | 'absent' | 'approved_medical' | 'cancelled')}
+                                                        className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+                                                    >
+                                                        <span className={`h-2 w-2 rounded-full ${option.dot}`} />
+                                                        {option.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             {scheduledClasses.length > 0 ? (
-                                <div className="space-y-2">
+                                <div className={`space-y-2 ${isMarkingAll ? 'pointer-events-none opacity-60' : ''}`} aria-busy={isMarkingAll}>
                                     {groupConsecutiveClasses(scheduledClasses).map((subject, idx) => {
                                         const subId = subject._id;
                                         const rowId = `${subId}-${subject.attendance_type || idx}`;

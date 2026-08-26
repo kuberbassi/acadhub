@@ -24,14 +24,28 @@ const ChatSchema = z.object({
  */
 async function buildFullContext(req: AuthRequest, selectedSemester?: number): Promise<string> {
     const userId = req.userId!
-    const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const dateParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(now)
+    const datePart = (type: Intl.DateTimeFormatPartTypes) => dateParts.find(part => part.type === type)?.value || ''
+    const today = `${datePart('year')}-${datePart('month')}-${datePart('day')}`
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const todayStr = days[new Date().getDay()]
+    const todayStr = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }).format(now)
 
-    const [user, subjects, recentLogs, allTimetables, courses, prefs, backups, systemLogs] = await Promise.all([
-        prisma.user.findUnique({ where: { id: userId } }),
-        prisma.subject.findMany({ where: { user_id: userId } }),
-        prisma.attendanceLog.findMany({ where: { user_id: userId }, orderBy: { date: 'desc' }, take: 20 }),
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    const activeSem = selectedSemester || user?.current_semester || 1
+    const attendanceSemesterFilter = {
+        OR: [
+            { semester: activeSem },
+            { semester: null, subject: { is: { semester: activeSem } } },
+        ],
+    }
+
+    const [subjects, recentLogs, medicalLeaveCount, allTimetables, courses, prefs, backups, systemLogs] = await Promise.all([
+        prisma.subject.findMany({ where: { user_id: userId, semester: activeSem } }),
+        prisma.attendanceLog.findMany({ where: { user_id: userId, ...attendanceSemesterFilter }, orderBy: [{ date: 'desc' }, { timestamp: 'desc' }], take: 20 }),
+        prisma.attendanceLog.count({ where: { user_id: userId, ...attendanceSemesterFilter, status: { in: ['medical', 'approved_medical'] } } }),
         prisma.timetable.findMany({ where: { user_id: userId } }),
         prisma.manualCourse.findMany({ where: { user_id: userId } }),
         prisma.userPreference.findUnique({ where: { user_id: userId } }),
@@ -39,7 +53,6 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
         prisma.systemLog.findMany({ where: { user_id: userId }, orderBy: { timestamp: 'desc' }, take: 10 })
     ])
 
-    const activeSem = selectedSemester || user?.current_semester || 1
     let resolvedTimetable = allTimetables.find(t => t.semester === activeSem)
     
     if (!resolvedTimetable && allTimetables.length > 0) {
@@ -121,15 +134,19 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
                 completedAssignments += Number(a.completed ?? 0)
             }
 
-            const isSameSem = !selectedSemester || sub.semester === selectedSemester
-            lines.push(`  - ${sub.name} (Code: ${sub.code || 'N/A'}, Semester: ${sub.semester}${isSameSem ? ' - Selected' : ''}): Current: ${pct}% (${attended}/${total}) | Target: ${target}% | Bunk Status: ${bg.status_message}${trackerInfo}`)
+            lines.push(`  - ${sub.name} (Code: ${sub.code || 'N/A'}, Semester: ${sub.semester} - Selected): Current: ${pct}% (${attended}/${total}) | Target: ${target}% | Bunk Status: ${bg.status_message}${trackerInfo}`)
         }
         
         const summary = AttendanceCalculator.getAttendanceSummary(subjects, user?.attendance_threshold ?? 75, user?.warning_threshold ?? 76)
+        const withoutMedical = AttendanceCalculator.calculatePercentage(
+            Math.max(0, summary.total_attended - medicalLeaveCount),
+            summary.total_classes
+        )
         
         lines.push('')
         lines.push('## Analytics KPIs')
         lines.push(`Overall Attendance: ${summary.total_attended}/${summary.total_classes} = ${summary.overall_percentage}%`)
+        lines.push(`Attendance With Medical Leaves Counted As Absent: ${summary.total_attended - medicalLeaveCount}/${summary.total_classes} = ${withoutMedical}% (${medicalLeaveCount} medical leave${medicalLeaveCount === 1 ? '' : 's'})`)
         lines.push(`Overall Attendance Status: ${summary.risk_level}`)
         lines.push(`Safe Bunks Remaining (Overall): ${summary.safe_bunks_remaining}`)
         lines.push(`Total Practical Items Tracked: ${completedPracticals}/${totalPracticals} Completed`)
@@ -181,9 +198,44 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
         const todaySlots = schedule[todayStr]
         if (todaySlots?.length) {
             const todayLogs = recentLogs.filter((l: any) => l.date === today)
+            const matchedLogIds = new Set<string>()
+            let previousClass: any = null
+            let blockStart = ''
+            let currentBlockHasLog = false
             const pending = todaySlots.filter((slot: any) => {
                 const subId = String(slot.subject_id || '')
-                return !todayLogs.some((log: any) => String(log.subject_id) === subId && log.type === String(slot.type || 'Lecture'))
+                const slotType = String(slot.type || 'Lecture')
+                const normalizedType = slotType.toLowerCase()
+                const isClass = !!subId && !['break', 'lunch', 'gap', 'free', 'custom'].includes(normalizedType)
+                if (!isClass) {
+                    previousClass = null
+                    blockStart = ''
+                    return false
+                }
+
+                const continuesBlock = previousClass
+                    && String(previousClass.subject_id || '') === subId
+                    && String(previousClass.type || 'Lecture') === slotType
+                if (continuesBlock) {
+                    previousClass = slot
+                    return false
+                }
+                blockStart = String(slot.start_time || slot.startTime || slot.time || '')
+                previousClass = slot
+                const blockType = `${slotType}::${blockStart}`
+                const exact = todayLogs.find((log: any) =>
+                    !matchedLogIds.has(String(log.id))
+                    && String(log.subject_id) === subId
+                    && String(log.type) === blockType
+                )
+                const legacy = exact || todayLogs.find((log: any) =>
+                    !matchedLogIds.has(String(log.id))
+                    && String(log.subject_id) === subId
+                    && String(log.type) === slotType
+                )
+                if (legacy) matchedLogIds.add(String(legacy.id))
+                currentBlockHasLog = !!legacy
+                return !currentBlockHasLog
             })
 
             if (pending.length) {
@@ -232,7 +284,7 @@ You have direct, real-time access to the student's unified database. Your missio
 4. STUDY STRATEGY & TACTICS: If a student asks about performance or optimization:
    - Identify their weakest results or low-progress skills/online courses.
    - Suggest a concrete 3-step study or attendance strategy to optimize their semester.
-5. METRIC UNIFICATION: Use CGPA (Weighted), Overall Attendance, and Academic Strength as the definitive performance metrics. Always quote exact percentages and numbers.
+5. METRIC UNIFICATION: Use CGPA (Weighted), Official Overall Attendance, Attendance With Medical Leaves Counted As Absent, and Academic Strength as definitive metrics. Clearly label which attendance percentage you quote and never treat the medical-as-absent scenario as the official percentage.
 6. TODAY'S PENDING ACTION: Remind the student of any pending attendance logs that need to be marked today.
 7. SEMESTER CURATION: The context specifies the active selected semester (UI State). Unless the user explicitly specifies a particular semester in their prompt, you MUST default your answers and stats analysis to the currently active selected semester.
 8. PROFILE & SESSION AWARENESS: You have direct access to the student's complete profile (default target attendance) and detailed system activity logs. Utilize these metrics when asked about user status, profile settings, or activity history.

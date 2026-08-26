@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import AttendanceModal from '@/components/modals/AttendanceModal';
+import { formatLocalDate } from '@/lib/date';
 import { attendanceService } from '@/services/attendance.service';
 import { useSemester } from '@/contexts/SemesterContext';
 import { useToast } from '@/components/ui/Toast';
@@ -10,8 +11,17 @@ interface AttendanceRecord {
     date: string;
     subject_id: string;
     subject_name: string;
-    status: 'present' | 'absent';
+    status: 'present' | 'absent' | 'medical' | 'approved_medical' | 'cancelled' | 'substituted' | 'late' | 'duty';
 }
+
+const CALENDAR_STATUS_STYLES: Record<string, { label: string; dot: string }> = {
+    present: { label: 'Present', dot: 'bg-on-surface' },
+    absent: { label: 'Absent', dot: 'bg-red-500' },
+    medical: { label: 'Medical Leave', dot: 'bg-blue-500' },
+    approved_medical: { label: 'Medical Leave', dot: 'bg-blue-500' },
+    cancelled: { label: 'Cancelled', dot: 'bg-slate-400' },
+    substituted: { label: 'Substitution', dot: 'bg-violet-500' },
+};
 
 const Calendar: React.FC = () => {
     const { showToast } = useToast();
@@ -69,10 +79,7 @@ const Calendar: React.FC = () => {
     };
 
     const getAttendanceForDate = (date: Date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return attendanceData[`${year}-${month}-${day}`] || [];
+        return attendanceData[formatLocalDate(date)] || [];
     };
 
     const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
@@ -92,7 +99,7 @@ const Calendar: React.FC = () => {
     const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     return (
-        <div className="max-w-4xl mx-auto pb-24 px-4 select-none">
+        <div className="max-w-4xl mx-auto pb-24 select-none">
             {/* Page Header */}
             <div className="mb-8">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/40 mb-2">
@@ -150,8 +157,6 @@ const Calendar: React.FC = () => {
                             const date = new Date(year, month, day);
                             const attendance = getAttendanceForDate(date);
                             const isToday = new Date().toDateString() === date.toDateString();
-                            const present = attendance.filter(a => a.status === 'present');
-                            const absent = attendance.filter(a => a.status === 'absent');
                             const total = attendance.length;
 
                             return (
@@ -170,12 +175,12 @@ const Calendar: React.FC = () => {
                                     </span>
 
                                     {total > 0 && (
-                                        <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5 h-1">
-                                            {present.slice(0, 3).map((_, idx) => (
-                                                <div key={`p-${idx}`} className="w-1 h-1 rounded-full bg-on-surface" />
-                                            ))}
-                                            {absent.slice(0, 3).map((_, idx) => (
-                                                <div key={`a-${idx}`} className="w-1 h-1 rounded-full bg-red-500" />
+                                        <div className="absolute bottom-1 left-1 right-1 flex justify-center gap-0.5 h-1 overflow-hidden">
+                                            {attendance.slice(0, 6).map((record, idx) => (
+                                                <div
+                                                    key={`${record.status}-${idx}`}
+                                                    className={`w-1 h-1 shrink-0 rounded-full ${CALENDAR_STATUS_STYLES[record.status]?.dot || 'bg-orange-500'}`}
+                                                />
                                             ))}
                                         </div>
                                     )}
@@ -185,15 +190,15 @@ const Calendar: React.FC = () => {
                     </div>
 
                     {/* Legend */}
-                    <div className="mt-8 pt-5 border-t border-outline/30 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/40">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-on-surface" />
-                            <span>Present</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-red-500" />
-                            <span>Absent</span>
-                        </div>
+                    <div className="mt-8 pt-5 border-t border-outline/30 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/40">
+                        {Object.entries(CALENDAR_STATUS_STYLES)
+                            .filter(([status]) => status !== 'medical')
+                            .map(([status, style]) => (
+                                <div key={status} className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${style.dot}`} />
+                                    <span>{style.label}</span>
+                                </div>
+                            ))}
                         <div className="flex items-center gap-2">
                             <div className="px-2 py-0.5 rounded border border-on-surface/50 text-[8px] font-black">Today</div>
                         </div>

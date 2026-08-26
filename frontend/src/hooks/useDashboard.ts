@@ -4,6 +4,7 @@ import { attendanceService } from '@/services/attendance.service';
 import { useSemester } from '@/contexts/SemesterContext';
 import type { DashboardData } from '@/types';
 import axios from 'axios';
+import { formatLocalDate } from '@/lib/date';
 
 
 export const useDashboard = () => {
@@ -38,7 +39,7 @@ export const useMarkAttendance = () => {
 
     return useMutation({
         mutationFn: async ({ subjectId, status }: { subjectId: string; status: 'present' | 'absent' }) => {
-            await attendanceService.markAttendance(subjectId, status, new Date().toISOString().split('T')[0]);
+            await attendanceService.markAttendance(subjectId, status, formatLocalDate());
         },
         onMutate: async ({ subjectId, status }) => {
             await queryClient.cancelQueries({ queryKey: ['dashboard', currentSemester] });
@@ -75,6 +76,10 @@ export const useMarkAttendance = () => {
                         totalClasses += s.total || 0;
                     });
                     const newOverall = totalClasses > 0 ? (totalAtt / totalClasses * 100) : 0;
+                    const medicalLeaveCount = old.medical_leave_count ?? 0;
+                    const newWithoutMedical = totalClasses > 0
+                        ? (Math.max(0, totalAtt - medicalLeaveCount) / totalClasses * 100)
+                        : 0;
 
                     const targetThreshold = queryClient.getQueryData<any>(['user'])?.attendance_threshold || 75;
                     const newSafeBunks = totalClasses > 0 ? Math.max(0, Math.floor((totalAtt * 100 - targetThreshold * totalClasses) / targetThreshold)) : 0;
@@ -83,6 +88,7 @@ export const useMarkAttendance = () => {
                         ...old,
                         subjects: updatedSubjects,
                         overall_attendance: newOverall,
+                        attendance_without_medical: newWithoutMedical,
                         summary: {
                             ...(old.summary || {}),
                             overall_percentage: newOverall,

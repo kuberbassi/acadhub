@@ -8,6 +8,7 @@ import type {
     SystemLog,
     AcademicRecord
 } from '@/types';
+import { formatLocalDate } from '@/lib/date';
 
 const extractApiData = <T>(response: any, fallback: T): T => {
     const body = response?.data;
@@ -241,7 +242,7 @@ export const attendanceService = {
 
     // Classes
     getTodaysClasses: async (): Promise<Subject[]> => {
-        const response = await api.get('/api/attendance/classes-for-date?date=' + new Date().toISOString().split('T')[0]);
+        const response = await api.get('/api/attendance/classes-for-date?date=' + formatLocalDate());
         return response.data.data;
     },
 
