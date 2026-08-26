@@ -6,7 +6,7 @@ import { ENV } from '../config/env.js'
 import { prisma } from '../config/prisma.js'
 import { requireAuth, invalidateAuthCache, type AuthRequest } from '../middleware/auth.js'
 import { ok, fail } from '../utils/response.js'
-import { getClientIp } from '../utils/ip.js'
+import { getClientCountry, getClientIp } from '../utils/ip.js'
 import { triggerAutoBackupIfNeeded } from '../utils/googleDrive.js'
 import { encryptSecret } from '../utils/secrets.js'
 import { normalizeRelatedInstant } from '../utils/timestamps.js'
@@ -96,6 +96,7 @@ type AuthSession = {
   refresh_expires_at: Date
   refresh_issued_at: Date
   ip: string | null
+  country_code: string | null
   user_agent: string | null
   last_active_at: Date
   rotated_at: Date | null
@@ -151,6 +152,7 @@ async function issueAuthSession(req: any, res: any, userId: string, replaceOldHa
   const now = new Date()
 
   const ip = getClientIp(req)
+  const countryCode = getClientCountry(req)
   const user_agent = (req.headers['user-agent'] as string) || null
   const deviceId = (req.headers['x-device-id'] as string) || null
   const hash = hashRefreshToken(refreshToken)
@@ -197,6 +199,7 @@ async function issueAuthSession(req: any, res: any, userId: string, replaceOldHa
       refresh_token_hash: hash,
       refresh_expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       ip,
+      country_code: countryCode,
       user_agent,
       last_active_at: now,
     }
@@ -464,6 +467,7 @@ router.get('/sessions', requireAuth, async (req: AuthRequest, res) => {
       id: s.id,
       device_id: s.device_id || null,
       ip: s.ip || 'Unknown',
+      country_code: s.country_code || null,
       user_agent: s.user_agent || 'Unknown',
       refresh_issued_at: normalizeRelatedInstant(s.id, s.refresh_issued_at, s.refresh_issued_at)!.getTime(),
       last_active_at: normalizeRelatedInstant(s.id, s.refresh_issued_at, s.last_active_at)!.getTime(),

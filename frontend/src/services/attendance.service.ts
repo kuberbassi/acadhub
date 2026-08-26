@@ -540,7 +540,17 @@ export const attendanceService = {
         const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
         if (snapshot) params.set('snapshot', snapshot);
         const response = await api.get(`/api/profile/logs?${params.toString()}`);
-        return response.data.data;
+        const payload = response.data.data ?? response.data;
+        if (Array.isArray(payload)) {
+            const items = payload.slice(offset, offset + limit);
+            return { items, has_more: payload.length > offset + limit, next_offset: offset + items.length, snapshot: snapshot || new Date().toISOString() };
+        }
+        return {
+            items: Array.isArray(payload?.items) ? payload.items : [],
+            has_more: Boolean(payload?.has_more),
+            next_offset: Number(payload?.next_offset) || offset,
+            snapshot: String(payload?.snapshot || snapshot || new Date().toISOString()),
+        };
     },
 
     // Academic Records (not ported — stub)

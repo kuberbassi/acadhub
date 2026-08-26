@@ -37,3 +37,12 @@ export function getClientIp(req: Request): string | null {
 
   return normalizeIp(req.ip ?? (req as any).socket?.remoteAddress ?? null)
 }
+
+/** Reads the ISO 3166-1 alpha-2 country supplied by the hosting edge. */
+export function getClientCountry(req: Request): string | null {
+  const ip = getClientIp(req)
+  if (ip === 'localhost') return 'LOCAL'
+  const raw = req.headers['x-vercel-ip-country'] ?? req.headers['cf-ipcountry']
+  const value = (Array.isArray(raw) ? raw[0] : raw)?.trim().toUpperCase()
+  return value && /^[A-Z]{2}$/.test(value) ? value : null
+}

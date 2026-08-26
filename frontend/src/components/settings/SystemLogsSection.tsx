@@ -53,7 +53,7 @@ const SystemLogsSection: React.FC = () => {
         }
     };
 
-    const groupedLogs = useMemo(() => logs.reduce((acc: Record<string, SystemLog[]>, log) => {
+    const groupedLogs = useMemo(() => (logs || []).reduce((acc: Record<string, SystemLog[]>, log) => {
         const timestamp = parseTimestamp(log);
         const date = timestamp ? timestamp.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown date';
         if (!acc[date]) acc[date] = [];

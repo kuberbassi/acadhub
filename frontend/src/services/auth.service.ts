@@ -6,6 +6,7 @@ export interface AuthSessionSummary {
     id: string;
     device_id?: string | null;
     ip: string;
+    country_code?: string | null;
     user_agent: string;
     refresh_issued_at: number;
     last_active_at: number;

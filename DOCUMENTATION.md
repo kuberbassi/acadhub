@@ -87,6 +87,7 @@ The active-device view updates the current session's `last_active_at` when it is
 | `id` | `String` | `@id`, `@default(cuid())` | Unique session identifier. |
 | `user_id` | `String` | | Foreign key referencing `User.id`. |
 | `device_id` | `String?` | | Unique hardware signature. |
+| `country_code` | `String?` | | ISO country code captured from trusted hosting-edge headers; no third-party IP lookup is performed. |
 | `refresh_token_hash` | `String` | `@unique` | Securely hashed OAuth token. |
 | `refresh_expires_at` | `DateTime`| | Session expiration timestamp. |
 | `refresh_issued_at` | `DateTime`| `@default(now())` | Issuance timestamp. |

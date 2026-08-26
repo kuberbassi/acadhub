@@ -7,6 +7,7 @@ import { useConfirm } from '@/contexts/ConfirmContext';
 interface Session {
   id: string;
   ip: string;
+  country_code?: string | null;
   user_agent: string;
   refresh_issued_at: number;
   last_active_at: number;
@@ -129,6 +130,16 @@ const SessionsSection: React.FC<SessionsSectionProps> = ({ showToast }) => {
     });
   };
 
+  const formatCountry = (code?: string | null) => {
+    if (code === 'LOCAL') return 'Local device';
+    if (!code) return 'Country unknown';
+    try {
+      return new Intl.DisplayNames([navigator.language], { type: 'region' }).of(code) || code;
+    } catch {
+      return code;
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-48 flex items-center justify-center">
@@ -194,6 +205,8 @@ const SessionsSection: React.FC<SessionsSectionProps> = ({ showToast }) => {
                     </div>
                     <p className="text-[11px] text-on-surface-variant/60 font-medium flex flex-wrap gap-x-2.5 gap-y-1">
                       <span>IP: {session.ip}</span>
+                      <span className="text-on-surface-variant/20">•</span>
+                      <span>{formatCountry(session.country_code)}</span>
                       <span className="text-on-surface-variant/20">•</span>
                       <span>{session.is_current ? 'Active now' : `Last verified: ${formatDate(session.last_active_at)}`}</span>
                     </p>

@@ -67,6 +67,7 @@ model UserSession {
   refresh_expires_at DateTime
   refresh_issued_at  DateTime @default(now())
   ip                 String?
+  country_code       String?
   user_agent         String?
   last_active_at     DateTime @default(now())
   rotated_at         DateTime? // Grace period marker for concurrent requests
