@@ -21,6 +21,7 @@ const extractApiData = <T>(response: any, fallback: T): T => {
 const CACHE_TTL_MS = 12_000;
 const requestCache = new Map<string, { expiresAt: number; data: unknown }>();
 const PERSISTENT_CACHE_PREFIX = 'zenith_cache:';
+let systemLogsUsesLegacyApi = false;
 
 const getPersistentCached = <T>(key: string): T | null => {
     try {
@@ -537,14 +538,18 @@ export const attendanceService = {
 
     // System logs
     getSystemLogs: async (limit = 7, offset = 0, snapshot?: string): Promise<{ items: SystemLog[]; has_more: boolean; next_offset: number; snapshot: string }> => {
-        const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-        if (snapshot) params.set('snapshot', snapshot);
+        const requestedLimit = systemLogsUsesLegacyApi ? offset + limit : limit;
+        const params = new URLSearchParams({ limit: String(requestedLimit) });
+        if (!systemLogsUsesLegacyApi) params.set('offset', String(offset));
+        if (!systemLogsUsesLegacyApi && snapshot) params.set('snapshot', snapshot);
         const response = await api.get(`/api/profile/logs?${params.toString()}`);
         const payload = response.data.data ?? response.data;
         if (Array.isArray(payload)) {
+            systemLogsUsesLegacyApi = true;
             const items = payload.slice(offset, offset + limit);
-            return { items, has_more: payload.length > offset + limit, next_offset: offset + items.length, snapshot: snapshot || new Date().toISOString() };
+            return { items, has_more: payload.length >= requestedLimit, next_offset: offset + items.length, snapshot: snapshot || new Date().toISOString() };
         }
+        systemLogsUsesLegacyApi = false;
         return {
             items: Array.isArray(payload?.items) ? payload.items : [],
             has_more: Boolean(payload?.has_more),
