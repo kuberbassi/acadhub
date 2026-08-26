@@ -45,10 +45,15 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
     const [scheduledClasses, setScheduledClasses] = useState<any[]>([]);
     const [allSubjects, setAllSubjects] = useState<any[]>([]);
     const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+    const [logsLoading, setLogsLoading] = useState(false);
+    const [logsError, setLogsError] = useState<string | null>(null);
+    const [loadedLogsDate, setLoadedLogsDate] = useState<string | null>(null);
     const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
     const [isMarkAllOpen, setIsMarkAllOpen] = useState(false);
     const [isMarkingAll, setIsMarkingAll] = useState(false);
     const markAllRef = React.useRef<HTMLDivElement>(null);
+    const classesRequestRef = React.useRef(0);
+    const logsRequestRef = React.useRef(0);
 
     const debounceTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const debouncedOnSuccess = React.useCallback(() => {
@@ -65,9 +70,15 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
 
     useEffect(() => {
         if (isOpen) {
-            setSelectedDate(defaultDate || new Date());
-            loadClassesForDate(defaultDate || new Date());
-            fetchAttendanceLogs(defaultDate || new Date());
+            const initialDate = defaultDate || new Date();
+            setSelectedDate(initialDate);
+            setAttendanceLogs([]);
+            setLoadedLogsDate(null);
+            setLogsError(null);
+            setExpandedSubjectId(null);
+            setIsMarkAllOpen(false);
+            loadClassesForDate(initialDate);
+            fetchAttendanceLogs(initialDate, true);
         }
     }, [isOpen, defaultDate]);
 
@@ -84,13 +95,14 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
 
     // Instantly sync our local (optimistic & fetched) logs to the parent Calendar view
     useEffect(() => {
-        if (onLogsUpdate && selectedDate) {
+        if (onLogsUpdate && selectedDate && loadedLogsDate === formatLocalDate(selectedDate) && !logsLoading && !logsError) {
             const dateStr = formatLocalDate(selectedDate);
             onLogsUpdate(dateStr, attendanceLogs);
         }
-    }, [attendanceLogs, selectedDate, onLogsUpdate]);
+    }, [attendanceLogs, selectedDate, loadedLogsDate, logsLoading, logsError, onLogsUpdate]);
 
     const loadClassesForDate = async (date: Date, silent = false) => {
+        const requestId = ++classesRequestRef.current;
         if (!silent) setLoading(true);
         try {
             // Fix timezone issue: Avoid toISOString() which shifts day for regions like India
@@ -100,38 +112,82 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                 attendanceService.getClassesForDate(dateStr, currentSemester),
                 attendanceService.getSubjects(currentSemester)
             ]);
+            if (requestId !== classesRequestRef.current) return null;
             setScheduledClasses(scheduled);
             setAllSubjects(subjects);
+            return scheduled;
         } catch (error) {
+            if (requestId !== classesRequestRef.current) return null;
             console.error(error);
             showToast('error', 'Failed to load classes');
+            return null;
         } finally {
-            if (!silent) setLoading(false);
+            if (!silent && requestId === classesRequestRef.current) setLoading(false);
         }
     };
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = new Date(e.target.value);
+        const newDate = new Date(`${e.target.value}T00:00:00`);
         if (!isNaN(newDate.getTime())) {
             setSelectedDate(newDate);
+            setAttendanceLogs([]);
+            setLoadedLogsDate(null);
+            setLogsError(null);
+            setExpandedSubjectId(null);
+            setIsMarkAllOpen(false);
             loadClassesForDate(newDate);
-            fetchAttendanceLogs(newDate);
+            fetchAttendanceLogs(newDate, true);
         }
     };
 
-    const fetchAttendanceLogs = async (date: Date) => {
+    const fetchAttendanceLogs = async (date: Date, clearFirst = false): Promise<any[] | null> => {
+        const requestId = ++logsRequestRef.current;
+        const dateStr = formatLocalDate(date);
+        setLogsLoading(true);
+        setLogsError(null);
+        if (clearFirst) {
+            setAttendanceLogs([]);
+            setLoadedLogsDate(null);
+        }
         try {
-            const dateStr = formatLocalDate(date);
             const response = await api.get(`/api/attendance/logs?date=${dateStr}&limit=100&semester=${currentSemester}`);
 
             // Backend returns success_response({"logs": [...], ...}) 
             // So response.data.data is the payload we want
             const data = response.data.data;
-            setAttendanceLogs(data.logs || []);
+            const logs = data.logs || [];
+            if (requestId !== logsRequestRef.current) return null;
+            setAttendanceLogs(logs);
+            setLoadedLogsDate(dateStr);
+            return logs;
         } catch (error) {
+            if (requestId !== logsRequestRef.current) return null;
             console.error('Failed to fetch attendance logs:', error);
+            setLogsError('Marked records could not be loaded. Check your connection and retry.');
+            return null;
+        } finally {
+            if (requestId === logsRequestRef.current) setLogsLoading(false);
         }
     };
+
+    const reconcileSelectedDate = async () => {
+        const [logs, classes] = await Promise.all([
+            fetchAttendanceLogs(selectedDate),
+            loadClassesForDate(selectedDate, true),
+        ]);
+        return logs !== null && classes !== null;
+    };
+
+    useEffect(() => {
+        if (!isOpen || !logsError) return;
+
+        const reloadAfterReconnect = () => {
+            fetchAttendanceLogs(selectedDate, true);
+            loadClassesForDate(selectedDate, true);
+        };
+        window.addEventListener('online', reloadAfterReconnect);
+        return () => window.removeEventListener('online', reloadAfterReconnect);
+    }, [isOpen, logsError, selectedDate]);
 
 
 
@@ -192,7 +248,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
             ]);
             if (onSuccess) onSuccess();
         } catch (error: any) {
-            showToast('error', error.response?.data?.error || 'Failed to delete log');
+            const reconciled = await reconcileSelectedDate();
+            showToast(
+                'error',
+                reconciled
+                    ? 'The delete response was not confirmed. Verified records were reloaded.'
+                    : (error.response?.data?.error || 'Delete could not be verified. Reconnect and retry loading.')
+            );
         } finally {
             if (subjectId) {
                 setProcessingIds(prev => {
@@ -231,7 +293,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         } catch (error: any) {
             setScheduledClasses(snapshot.prevScheduled);
             setAttendanceLogs(snapshot.prevLogs);
-            showToast('error', error.response?.data?.error || 'Failed to mark');
+            const reconciled = await reconcileSelectedDate();
+            showToast(
+                'error',
+                reconciled
+                    ? 'The mark response was not confirmed. Verified records were reloaded.'
+                    : (error.response?.data?.error || 'Mark could not be verified. Reconnect and retry loading.')
+            );
         } finally {
             setProcessingIds(prev => {
                 const next = new Set(prev);
@@ -244,9 +312,14 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
     const markAllScheduled = async (status: 'present' | 'absent' | 'approved_medical' | 'cancelled') => {
         if (isMarkingAll || processingIds.size > 0 || scheduledClasses.length === 0) return;
 
+        const dateStr = formatLocalDate(selectedDate);
+        if (logsLoading || logsError || loadedLogsDate !== dateStr) {
+            showToast('error', 'Wait for Marked Records to load before marking all');
+            return;
+        }
+
         setIsMarkAllOpen(false);
         setIsMarkingAll(true);
-        const dateStr = formatLocalDate(selectedDate);
         const classes = groupConsecutiveClasses(scheduledClasses).map(subject =>
             subject.isMerged ? subject.originalClasses[0] : subject
         );
@@ -283,12 +356,24 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                 }
             }
 
-            await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]);
-            if (failed > 0) {
-                showToast('error', `${failed} of ${classes.length} classes could not be updated`);
+            const [refreshedLogs, refreshedClasses] = await Promise.all([
+                fetchAttendanceLogs(selectedDate),
+                loadClassesForDate(selectedDate, true),
+            ]);
+            if (!refreshedLogs || !refreshedClasses) {
+                const requestState = failed > 0 ? `${failed} request${failed === 1 ? '' : 's'} lost confirmation` : 'Updates were sent';
+                showToast('error', `${requestState}, but the latest records could not be verified. Retry loading before making more changes.`);
             } else {
+                const refreshedBlocks = groupConsecutiveClasses(refreshedClasses).map(subject =>
+                    subject.isMerged ? subject.originalClasses[0] : subject
+                );
+                const mismatched = refreshedBlocks.filter(subject => subject.marked_status !== status).length;
                 const label = status === 'approved_medical' ? 'medical leave' : status;
-                showToast('success', `All scheduled classes marked ${label}`);
+                if (mismatched === 0) {
+                    showToast('success', `All scheduled classes marked ${label}`);
+                } else {
+                    showToast('error', `${mismatched} of ${refreshedBlocks.length} classes are not marked ${label}. Verified records were reloaded.`);
+                }
             }
             debouncedOnSuccess();
         } catch (error: any) {
@@ -303,6 +388,10 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         if (isMarkingAll || processingIds.size > 0) return;
 
         const dateStr = formatLocalDate(selectedDate);
+        if (logsLoading || logsError || loadedLogsDate !== dateStr) {
+            showToast('error', 'Wait for Marked Records to load before clearing');
+            return;
+        }
         const visibleLogs = attendanceLogs.filter(log => log?.date === dateStr);
         const logIds = [...new Set(visibleLogs
             .map(log => String(log?._id || log?.id || ''))
@@ -322,12 +411,26 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         setIsMarkingAll(true);
         try {
             await attendanceService.unmarkAttendanceLogs(logIds, dateStr, currentSemester);
-            await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]);
+            const [refreshedLogs] = await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]);
+            if (!refreshedLogs) {
+                showToast('error', 'Records were cleared, but the latest data could not be reloaded');
+                return;
+            }
             showToast('success', `Cleared all ${logIds.length} marked record${logIds.length === 1 ? '' : 's'}`);
             debouncedOnSuccess();
         } catch (error: any) {
-            await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]).catch(() => {});
-            showToast('error', error.response?.data?.error || 'No records were cleared');
+            const [refreshedLogs] = await Promise.all([
+                fetchAttendanceLogs(selectedDate),
+                loadClassesForDate(selectedDate, true),
+            ]);
+            const remainingIds = new Set((refreshedLogs || []).map((log: any) => String(log?._id || log?.id || '')));
+            const wasApplied = !!refreshedLogs && logIds.every(logId => !remainingIds.has(logId));
+            if (wasApplied) {
+                showToast('success', `Cleared all ${logIds.length} marked record${logIds.length === 1 ? '' : 's'}`);
+                debouncedOnSuccess();
+            } else {
+                showToast('error', error.response?.data?.error || 'No records were cleared. Check your connection and retry.');
+            }
         } finally {
             setIsMarkingAll(false);
         }
@@ -361,7 +464,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         } catch (error: any) {
             setScheduledClasses(prevScheduled);
             setAttendanceLogs(prevLogs);
-            showToast('error', error.response?.data?.error || 'Failed to delete');
+            const reconciled = await reconcileSelectedDate();
+            showToast(
+                'error',
+                reconciled
+                    ? 'The clear response was not confirmed. Verified records were reloaded.'
+                    : (error.response?.data?.error || 'Clear could not be verified. Reconnect and retry loading.')
+            );
         } finally {
             setProcessingIds(prev => {
                 const next = new Set(prev);
@@ -441,7 +550,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
             resetDetailForm();
             debouncedOnSuccess();
         } catch (error: any) {
-            showToast('error', error.response?.data?.error || 'Failed to mark');
+            const reconciled = await reconcileSelectedDate();
+            showToast(
+                'error',
+                reconciled
+                    ? 'The update response was not confirmed. Verified records were reloaded.'
+                    : (error.response?.data?.error || 'Update could not be verified. Reconnect and retry loading.')
+            );
         } finally {
             setProcessingIds(prev => {
                 const next = new Set(prev);
@@ -481,8 +596,10 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         return aTs.localeCompare(bTs);
     });
     const selectedDateStr = formatLocalDate(selectedDate);
+    const recordsReady = loadedLogsDate === selectedDateStr && !logsLoading && !logsError;
     const markedRecordsCount = attendanceLogs.filter(log =>
-        log?.date === selectedDateStr
+        recordsReady
+        && log?.date === selectedDateStr
         && (log?._id || log?.id)
         && !String(log?._id || log?.id).startsWith('optimistic-')
     ).length;
@@ -530,7 +647,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                         <button
                                             type="button"
                                             onClick={() => setIsMarkAllOpen(open => !open)}
-                                            disabled={isMarkingAll || processingIds.size > 0}
+                                            disabled={isMarkingAll || processingIds.size > 0 || !recordsReady}
                                             aria-label="Mark all scheduled classes"
                                             aria-expanded={isMarkAllOpen}
                                             className="h-7 w-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high disabled:opacity-50 transition-colors cursor-pointer"
@@ -551,7 +668,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                                         key={option.status}
                                                         type="button"
                                                         onClick={() => markAllScheduled(option.status as 'present' | 'absent' | 'approved_medical' | 'cancelled')}
-                                                        disabled={scheduledClasses.length === 0}
+                                                        disabled={scheduledClasses.length === 0 || !recordsReady}
                                                         className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                                                     >
                                                         <span className={`h-2 w-2 rounded-full ${option.dot}`} />
@@ -562,7 +679,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                                 <button
                                                     type="button"
                                                     onClick={unmarkAllScheduled}
-                                                    disabled={markedRecordsCount === 0}
+                                                    disabled={!recordsReady || markedRecordsCount === 0}
                                                     className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-xs font-semibold text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                                                 >
                                                     <Trash2 size={13} />
@@ -575,7 +692,10 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                 )}
                             </div>
                             {scheduledClasses.length > 0 ? (
-                                <div className={`space-y-2 ${isMarkingAll ? 'pointer-events-none opacity-60' : ''}`} aria-busy={isMarkingAll}>
+                                <div
+                                    className={`space-y-2 ${(isMarkingAll || !recordsReady) ? 'pointer-events-none opacity-60' : ''}`}
+                                    aria-busy={isMarkingAll || !recordsReady}
+                                >
                                     {groupConsecutiveClasses(scheduledClasses).map((subject, idx) => {
                                         const subId = subject._id;
                                         const rowId = `${subId}-${subject.attendance_type || idx}`;
@@ -639,9 +759,25 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                     <line x1="8" y1="2" x2="8" y2="6"></line>
                                     <line x1="3" y1="10" x2="21" y2="10"></line>
                                 </svg>
-                                Marked Records ({sortedAttendanceLogs.length})
+                                Marked Records ({recordsReady ? sortedAttendanceLogs.length : '—'})
                             </h3>
-                            {sortedAttendanceLogs.length > 0 ? (
+                            {logsLoading ? (
+                                <div className="flex items-center justify-center gap-2 py-6 text-xs text-on-surface-variant/50">
+                                    <LoadingSpinner size="sm" />
+                                    Loading marked records…
+                                </div>
+                            ) : logsError ? (
+                                <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-3 text-center">
+                                    <p className="text-xs font-medium text-red-500">{logsError}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => fetchAttendanceLogs(selectedDate, true)}
+                                        className="mt-2 h-7 px-3 rounded-md border border-red-500/20 text-[10px] font-bold uppercase tracking-wider text-red-500 hover:bg-red-500/10 transition-colors"
+                                    >
+                                        Retry loading
+                                    </button>
+                                </div>
+                            ) : recordsReady && sortedAttendanceLogs.length > 0 ? (
                                 <div className="space-y-1.5">
                                     {sortedAttendanceLogs.map((log: any, idx: number) => {
                                         const logSubjectId = String(log.subject_id || '');
@@ -685,9 +821,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                         );
                                     })}
                                 </div>
-                            ) : (
+                            ) : recordsReady ? (
                                 <div className="text-center py-6">
                                     <p className="text-xs text-on-surface-variant/40 italic">No attendance marked for this date</p>
+                                </div>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <p className="text-xs text-on-surface-variant/40 italic">Waiting for verified records…</p>
                                 </div>
                             )}
                         </div>

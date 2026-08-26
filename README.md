@@ -96,6 +96,7 @@ npm run build
 ## Attendance Workflow
 
 - Mark each scheduled attendance block individually, or use the three-dot **Mark all** menu for Present, Absent, Medical Leave, or Cancelled. **Unmark all** atomically clears only the exact Marked Records loaded for the selected date and semester. Substitution remains an individual marking action because it requires selecting a replacement subject.
+- Attendance controls remain locked until the selected date's Marked Records are verified. Failed or lost mutation responses trigger a server reload, and reconnecting automatically retries record loading; writes are never blindly repeated.
 - Consecutive periods of one subject share a mark, while a later occurrence after another timetable slot remains independently markable.
 - The dashboard shows official attendance and a conservative **Medical as absent** percentage for leaves that have not yet been accepted.
 - Calendar colours distinguish Present, Absent, Medical Leave, Cancelled, and Substitution records.
