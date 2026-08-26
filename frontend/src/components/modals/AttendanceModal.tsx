@@ -24,11 +24,11 @@ const ATTENDANCE_STATUS_META: Record<string, { label: string; className: string 
     present: { label: 'Present', className: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' },
     absent: { label: 'Absent', className: 'bg-red-500/10 text-red-500 border-red-500/20' },
     late: { label: 'Late', className: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
-    medical: { label: 'Medical', className: 'bg-surface-container text-on-surface-variant border-outline' },
-    approved_medical: { label: 'Medical', className: 'bg-surface-container text-on-surface-variant border-outline' },
+    medical: { label: 'Medical', className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
+    approved_medical: { label: 'Medical', className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
     duty: { label: 'Duty', className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
-    cancelled: { label: 'Cancelled', className: 'bg-surface-container/50 text-on-surface-variant/70 border-outline' },
-    substituted: { label: 'Substituted', className: 'bg-primary/10 text-primary border-primary/20' },
+    cancelled: { label: 'Cancelled', className: 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/25' },
+    substituted: { label: 'Substituted', className: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20' },
 };
 
 const attendanceStatusMeta = (status: unknown) => ATTENDANCE_STATUS_META[String(status)] || {
@@ -860,17 +860,17 @@ const SubjectRow = ({
                     {/* Status Grid */}
                     <div className="grid grid-cols-2 gap-2">
                         {[
-                            { id: 'present', label: 'Present', color: 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20' },
-                            { id: 'absent', label: 'Absent', color: 'bg-red-500/10 text-red-500 border border-red-500/20' },
-                            { id: 'medical', label: 'Medical Leave', color: 'bg-surface-container text-on-surface-variant border border-outline' },
-                            { id: 'cancelled', label: 'Cancelled', color: 'bg-surface-container/50 text-on-surface-variant/70 border border-outline' },
-                            { id: 'substituted', label: 'Substituted', color: 'bg-primary/10 text-primary border border-primary/20' },
+                            { id: 'present', label: 'Present' },
+                            { id: 'absent', label: 'Absent' },
+                            { id: 'approved_medical', label: 'Medical Leave' },
+                            { id: 'cancelled', label: 'Cancelled' },
+                            { id: 'substituted', label: 'Substituted' },
                         ].map(opt => (
                             <button
                                 key={opt.id}
-                                onClick={() => setDetailStatus(opt.id === 'medical' ? 'approved_medical' : opt.id)}
-                                className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all border ${(detailStatus === opt.id || (opt.id === 'medical' && detailStatus === 'approved_medical'))
-                                    ? opt.color
+                                onClick={() => setDetailStatus(opt.id)}
+                                className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all border ${detailStatus === opt.id
+                                    ? attendanceStatusMeta(opt.id).className
                                     : 'bg-surface border-outline text-on-surface-variant/60 hover:bg-surface-container hover:text-on-surface'
                                     }`}
                             >
