@@ -16,7 +16,7 @@ const radialItems = [
     { name: 'Timetable', href: '/timetable', icon: CalendarClock },
     { name: 'Calendar', href: '/calendar', icon: CalendarDays },
     { name: 'Courses', href: '/courses', icon: GraduationCap },
-    { name: 'Assignments & Practicals', href: '/practicals', icon: Beaker },
+    { name: 'Practicals & Assignments', href: '/practicals', icon: Beaker },
     { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

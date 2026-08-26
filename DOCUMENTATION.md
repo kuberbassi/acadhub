@@ -285,7 +285,7 @@ Both `medical` and `approved_medical` are subtracted. The count is derived from 
 
 Calendar day cells display up to six compact log indicators in stored log order. Present uses the theme foreground colour, Absent red, Medical Leave blue, Cancelled slate, and Substitution violet; other supported attended states fall back to orange. The legend uses the same mapping.
 
-The floating radial navigation displays one centred page-name label above the expanded fan. It defaults to the current route and updates as the pointer focuses another bubble; individual bubbles remain icon-only to keep the compact layout uncluttered.
+The floating radial navigation displays one centred page-name label above the expanded fan. It defaults to the current route and updates as the pointer focuses another bubble; individual bubbles remain icon-only to keep the compact layout uncluttered. Labels mirror each destination's primary page name exactly, including **Practicals & Assignments**.
 
 Dashboard summary cards use natural content height on the desktop grid. A long daily timetable can therefore expand independently without stretching the attendance-health and academic-target cards into large empty panels.
 

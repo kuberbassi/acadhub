@@ -53,7 +53,7 @@ const Practicals: React.FC = () => {
     const [processingTrackers, setProcessingTrackers] = useState<Set<string>>(new Set());
 
     usePageMeta({
-        title: 'Assignments & Practicals | Semester',
+        title: 'Practicals & Assignments | Semester',
         description: 'Track practical records and assignment milestones across all your subjects.',
     });
 
