@@ -77,6 +77,7 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             const isRefreshRequest = requestUrl.includes('/api/auth/refresh');
             const isLoginRequest = requestUrl.includes('/api/auth/google');
+            const isSessionProbe = requestUrl.includes('/api/auth/me');
             const hasRetriedAuth = Boolean((config as any)?._authRefreshed);
             const shouldRefreshAuth = shouldHandleAsAuthExpiry(requestUrl, error);
 
@@ -95,7 +96,7 @@ api.interceptors.response.use(
                     
                     if (isSessionInvalid) {
                         localStorage.removeItem('user');
-                        window.location.href = '/login';
+                        if (!isSessionProbe) window.location.href = '/login';
                     }
                     return Promise.reject(error);
                 } finally {

@@ -7,7 +7,7 @@
     "frontend"
   ],
   "scripts": {
-    "start": "concurrently --names \"API,WEB\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix api-node\" \"npm run dev --prefix frontend\"",
+    "start": "concurrently --kill-others-on-fail --names \"API,WEB\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix api-node\" \"node scripts/wait-for-api.mjs && npm run dev --prefix frontend\"",
     "dev": "npm start",
     "api": "npm run dev --prefix api-node",
     "web": "npm run dev --prefix frontend",

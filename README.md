@@ -70,6 +70,7 @@ You can run the entire workspace concurrently from the root directory:
    ```
    * Frontend will start on `http://localhost:5173`
    * Backend API will start on `http://localhost:5001`
+   * The root startup command waits for `/api/health` before starting Vite, preventing temporary proxy connection errors while the API boots.
 
 ---
 

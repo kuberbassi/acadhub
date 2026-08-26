@@ -28,12 +28,13 @@ export const authService = {
 
     // Get current user
     getCurrentUser: async (): Promise<User | null> => {
-        try {
-            const response = await api.get('/api/auth/me');
-            return response.data.data;
-        } catch {
-            return null;
-        }
+        const response = await api.get('/api/auth/me');
+        return response.data.data;
+    },
+
+    clearLocalSession: (): void => {
+        attendanceService.clearAllLocalCaches();
+        localStorage.removeItem('user');
     },
 
     // Logout

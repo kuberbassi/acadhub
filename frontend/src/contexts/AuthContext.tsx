@@ -22,18 +22,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const initAuth = async () => {
             const storedUser = authService.getStoredUser();
             if (storedUser) {
-                // Optimistically set user and stop loading so the UI renders instantly
+                // Keep the cached identity provisional until the cookie-backed
+                // session is verified. Protected routes stay gated by loading.
                 setUser(storedUser);
-                setLoading(false);
 
-                // Verify session with backend in the background
                 try {
                     const verifiedUser = await authService.getCurrentUser();
                     if (!verifiedUser) {
-                        // Session invalid (e.g. server restart)
-                        console.warn('Session invalid, clearing user');
                         setUser(null);
-                        authService.logout();
+                        authService.clearLocalSession();
                     } else {
                         // Update state AND storage with fresh data (e.g. new PFP)
                         setUser(verifiedUser);
@@ -47,10 +44,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (isSessionInvalid) {
                         console.warn('Session invalid/expired, logging out');
                         setUser(null);
-                        authService.logout();
+                        authService.clearLocalSession();
                     } else {
                         console.warn('Failed to verify session on startup (network/server error). Keeping cached session.', error);
                     }
+                } finally {
+                    setLoading(false);
                 }
             } else {
                 setLoading(false);
