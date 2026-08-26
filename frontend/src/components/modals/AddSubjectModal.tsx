@@ -85,7 +85,7 @@ const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ isOpen, onClose, onSu
                     autoFocus
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                     <Input
                         label="Semester"
                         type="number"
@@ -104,9 +104,9 @@ const AddSubjectModal: React.FC<AddSubjectModalProps> = ({ isOpen, onClose, onSu
                         onChange={(e) => setCredits(e.target.value)}
                     />
 
-                    <div className="space-y-2">
+                    <div className="col-span-2 space-y-2">
                         <label className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest ml-1">Categories</label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-outline bg-surface-container p-2 min-h-[46px]">
                             {['Theory', 'Practical', 'Assignment'].map((cat) => (
                                 <button
                                     key={cat}

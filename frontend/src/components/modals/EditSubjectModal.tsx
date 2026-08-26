@@ -140,11 +140,11 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                 </div>
 
                 {/* Categories, Code, & Credits Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(5.5rem,0.55fr)] gap-4 items-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                     {/* Categories Multi-Select */}
-                    <div className="space-y-2 sm:col-span-2 md:col-span-1">
+                    <div className="space-y-2 sm:col-span-2">
                         <label className="text-xs font-semibold text-on-surface-variant/70 uppercase ml-1">Categories</label>
-                        <div className="flex flex-wrap md:flex-nowrap items-center gap-2 p-2 bg-surface-container border border-outline rounded-lg min-h-[46px]">
+                        <div className="flex flex-wrap items-center gap-2 p-2 bg-surface-container border border-outline rounded-lg min-h-[46px]">
                             {['Theory', 'Practical', 'Assignment'].map((cat) => (
                                 <button
                                     key={cat}
