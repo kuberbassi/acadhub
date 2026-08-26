@@ -83,3 +83,19 @@ npx tsx scripts/test-attendance.ts
 ```
 
 > All test data is created under a sentinel semester (`99`) with dates in year `2000` and is fully cleaned up after the run.
+
+For a non-mutating production build check from the repository root:
+
+```bash
+npm run build
+```
+
+---
+
+## Attendance Workflow
+
+- Mark each scheduled attendance block individually, or use the three-dot **Mark all** menu for Present, Absent, Medical Leave, or Cancelled. Substitution remains an individual action because it requires selecting a replacement subject.
+- Consecutive periods of one subject share a mark, while a later occurrence after another timetable slot remains independently markable.
+- The dashboard shows official attendance and a conservative **Medical as absent** percentage for leaves that have not yet been accepted.
+- Calendar colours distinguish Present, Absent, Medical Leave, Cancelled, and Substitution records.
+- Semester Assistant uses the selected semester, understands block-based pending attendance, and keeps official and medical-as-absent percentages clearly separated.

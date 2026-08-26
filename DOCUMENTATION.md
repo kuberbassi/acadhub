@@ -137,7 +137,7 @@ Tracks individual marked attendance logs.
 | `notes` | `String?` | | Student notes. |
 | `semester` | `Int?` | | Cached semester number. |
 | `substituted_by`| `String?` | | Foreign key referencing substitute subject ID. |
-| `timestamp` | `DateTime` | `@default(now())` | Entry log creation time. |
+| `timestamp` | `DateTime` | `@default(now())` | Server-generated entry creation time. Editing preserves this timestamp; the corresponding `SystemLog` records the edit time. |
 
 Attendance logs have a compound uniqueness constraint on `user_id`, `subject_id`, `date`, and `type`. The timetable attendance flow therefore supplies a stable block-aware `type`: every adjacent run of the same subject and slot type receives the identifier of the run's first period. This preserves one-click marking for consecutive periods without collapsing another occurrence of that subject later in the day.
 
@@ -226,7 +226,9 @@ Semester enables seamless data migrations. The source user initiates migration, 
 The destination account submits this token. The backend verifies the signature, initiates safety backups for both accounts, wipes the destination data, transfers the source records, updates the destination profile fields, and deletes the source user account.
 
 ### 3.3 🤖 LLM Failover In Semester Assistant
-The AI Semester Assistant uses a Groq LLM (`llama-3.3-70b-versatile`) to generate query completions. In the event of rate limit errors or API timeouts, it falls back to a Google Gemini API (`gemini-2.5-flash`) stream, guaranteeing uninterrupted utility for users.
+The AI Semester Assistant uses a Groq LLM (`llama-3.3-70b-versatile`) to generate query completions. In the event of rate limit errors or API timeouts, it falls back to a Google Gemini API (`gemini-2.5-flash`) stream.
+
+The context builder is scoped to the semester selected in the UI (or the user's current semester when none is supplied). Attendance logs, subject totals, medical-leave counts, timetable selection, and pending-class checks use that same semester. Pending attendance uses the block-aware identity described below, and all “today” calculations use the `Asia/Kolkata` calendar day. The assistant receives official attendance and the medical-as-absent scenario as separately labelled metrics and is instructed never to present the latter as official attendance.
 
 ### 3.4 Timetable Attendance Blocks
 
@@ -235,3 +237,38 @@ The AI Semester Assistant uses a Groq LLM (`llama-3.3-70b-versatile`) to generat
 For example, a schedule of `Mathematics, Mathematics, Physics, Mathematics` produces three markable blocks: the first two Mathematics periods share one mark, Physics has one mark, and the later Mathematics period has its own mark. The API returns `attendance_type` for each scheduled row, and the frontend sends that value to `POST /api/attendance/mark` as the record's `type`.
 
 The classes-for-date response matches block-aware logs by this exact identity. Older records that only contain a legacy type such as `Lecture` remain supported and are assigned sequentially to compatible consecutive blocks. Optimistic marking, editing, and deletion in `AttendanceModal` use the same block identity, preventing one occurrence from changing another occurrence of the same subject on the same date.
+
+### 3.5 Bulk Attendance Marking
+
+The three-dot action on the `Scheduled Classes` strip applies Present, Absent, Medical Leave (`approved_medical`), or Cancelled to every scheduled attendance block. Substitution is intentionally excluded because each substituted class requires an explicit replacement subject.
+
+Bulk writes are processed sequentially in timetable order. Each request includes the block's `attendance_type`; an existing record is edited, while an unmarked block is created. If stale client state races with the compound uniqueness constraint, the frontend detects the duplicate response and edits the returned record to the requested status. Individual and detailed marking use the same correction rule. Row actions are disabled while a bulk operation is active, and the modal reloads server data after completion. If only some requests fail, successful records remain saved and the UI reports the exact failure count after reconciliation.
+
+New records receive their creation timestamp from PostgreSQL. Sequential creation gives deterministic request order without accepting a client-provided timestamp. Updating an existing mark preserves its original attendance-log creation timestamp; a separate system activity entry records the edit event and its time.
+
+### 3.6 Attendance Status and Percentage Rules
+
+The status counters are centralized in `api-node/src/utils/attendanceStatus.ts`:
+
+| Status | Included in conducted total | Included as attended |
+| :--- | :---: | :---: |
+| `present`, `late`, `duty`, `substituted` | Yes | Yes |
+| `medical`, `approved_medical` | Yes | Yes (official metric) |
+| `absent` | Yes | No |
+| `cancelled` | No | No |
+
+The dashboard's primary percentage is the official metric:
+
+`official attendance = total attended / total conducted classes`
+
+The smaller conservative metric keeps medical leaves in the conducted denominator but treats them as not attended:
+
+`medical as absent = (total attended - medical leave count) / total conducted classes`
+
+Both `medical` and `approved_medical` are subtracted. The count is derived from all matching semester logs, including legacy logs whose semester is resolved through their subject. Cancelled classes remain outside both formulas because they were not conducted. The AI assistant receives both values with explicit labels.
+
+### 3.7 Calendar Indicators and Local Dates
+
+Calendar day cells display up to six compact log indicators in stored log order. Present uses the theme foreground colour, Absent red, Medical Leave blue, Cancelled slate, and Substitution violet; other supported attended states fall back to orange. The legend uses the same mapping.
+
+Frontend attendance and course date defaults use `formatLocalDate` (`YYYY-MM-DD` from local calendar components) rather than slicing a UTC ISO timestamp. This prevents late-night or early-morning actions from being assigned to an adjacent date because of timezone conversion.
