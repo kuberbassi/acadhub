@@ -151,20 +151,22 @@ const SubjectRow: React.FC<{
             </td>
 
             <td className="px-6 py-3.5 text-right">
-                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex justify-end gap-1.5 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                     <button
                         onClick={() => setEditingSubject(subject)}
-                        className="p-1 rounded-md hover:bg-surface-container text-on-surface-variant/40 hover:text-on-surface transition-colors cursor-pointer"
-                        title="Edit"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-transparent text-on-surface-variant/60 hover:border-outline/60 hover:bg-surface-container hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 transition-all cursor-pointer"
+                        title={`Edit ${subject.name}`}
+                        aria-label={`Edit ${subject.name}`}
                     >
-                        <Edit2 size={11} />
+                        <Edit2 size={14} strokeWidth={1.8} />
                     </button>
                     <button
                         onClick={() => handleDeleteSubject(subject._id, subject.name)}
-                        className="p-1 rounded-md hover:bg-red-500/5 text-on-surface-variant/40 hover:text-red-500 transition-colors cursor-pointer"
-                        title="Delete"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-transparent text-on-surface-variant/60 hover:border-red-500/20 hover:bg-red-500/5 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 transition-all cursor-pointer"
+                        title={`Delete ${subject.name}`}
+                        aria-label={`Delete ${subject.name}`}
                     >
-                        <Trash2 size={11} />
+                        <Trash2 size={14} strokeWidth={1.8} />
                     </button>
                 </div>
             </td>

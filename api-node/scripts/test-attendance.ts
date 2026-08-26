@@ -19,6 +19,7 @@ import {
   isCountedAttendanceStatus,
   isAttendedAttendanceStatus,
 } from '../src/utils/attendanceStatus.js'
+import { unmarkAttendanceLogsAtomic } from '../src/utils/unmarkAttendance.js'
 
 const adapter = new PrismaNeonHttp(process.env.DATABASE_URL!, {})
 const prisma = new PrismaClient({ adapter, log: ['error'] })
@@ -123,7 +124,32 @@ async function main() {
     const gone = await prisma.attendanceLog.findUnique({ where: { id: logToDel.id } })
     assert(gone === null, 'Deleted log truly gone from DB')
 
-    section('8 · QUERY FILTERS')
+    section('8 · ATOMIC UNMARK ALL — EXACT DATE IDS + SUBSTITUTION')
+    const bulkDate = '2000-06-01'
+    const beforeBulkSub1 = await prisma.subject.findUnique({ where: { id: sub1Id } })
+    const beforeBulkSub2 = await prisma.subject.findUnique({ where: { id: sub2Id } })
+    const bulkPrimary = await prisma.attendanceLog.create({ data: { user_id: TEST_USER_ID, subject_id: sub1Id, subject_name: sub1.name, date: bulkDate, status: 'substituted', type: 'Lecture::09:00 AM', semester: TEST_SEMESTER, substituted_by: sub2Id } })
+    const bulkCompanion = await prisma.attendanceLog.create({ data: { user_id: TEST_USER_ID, subject_id: sub2Id, subject_name: sub2.name, date: bulkDate, status: 'present', type: 'substitution_class', semester: TEST_SEMESTER } })
+    const bulkAbsent = await prisma.attendanceLog.create({ data: { user_id: TEST_USER_ID, subject_id: sub1Id, subject_name: sub1.name, date: bulkDate, status: 'absent', type: 'Tutorial::10:00 AM', semester: TEST_SEMESTER } })
+    await prisma.subject.update({ where: { id: sub1Id }, data: { total: { increment: 2 }, attended: { increment: 1 } } })
+    await prisma.subject.update({ where: { id: sub2Id }, data: { total: { increment: 1 }, attended: { increment: 1 } } })
+
+    const bulkResult = await unmarkAttendanceLogsAtomic(TEST_USER_ID, bulkDate, TEST_SEMESTER, [bulkPrimary.id, bulkCompanion.id, bulkAbsent.id])
+    assert(bulkResult.requested_count === 3 && bulkResult.deleted_count === 3, 'Exact visible log snapshot deleted once', JSON.stringify(bulkResult))
+    const remainingBulkLogs = await prisma.attendanceLog.count({ where: { id: { in: [bulkPrimary.id, bulkCompanion.id, bulkAbsent.id] } } })
+    assert(remainingBulkLogs === 0, 'Primary, companion, and ordinary records all removed')
+    const afterBulkSub1 = await prisma.subject.findUnique({ where: { id: sub1Id } })
+    const afterBulkSub2 = await prisma.subject.findUnique({ where: { id: sub2Id } })
+    assert(afterBulkSub1?.total === beforeBulkSub1?.total && afterBulkSub1?.attended === beforeBulkSub1?.attended, 'Primary subject counters restored exactly')
+    assert(afterBulkSub2?.total === beforeBulkSub2?.total && afterBulkSub2?.attended === beforeBulkSub2?.attended, 'Substitution subject counters restored exactly once')
+
+    const staleLog = await prisma.attendanceLog.create({ data: { user_id: TEST_USER_ID, subject_id: sub1Id, subject_name: sub1.name, date: bulkDate, status: 'cancelled', type: 'Lecture::11:00 AM', semester: TEST_SEMESTER } })
+    const staleResult = await unmarkAttendanceLogsAtomic(TEST_USER_ID, bulkDate, TEST_SEMESTER, [staleLog.id, 'missing-log-id'])
+    const staleStillExists = await prisma.attendanceLog.findUnique({ where: { id: staleLog.id } })
+    assert(staleResult.deleted_count === 0 && !!staleStillExists, 'Stale mixed snapshot deletes nothing atomically')
+    await prisma.attendanceLog.delete({ where: { id: staleLog.id } })
+
+    section('9 · QUERY FILTERS')
     const bySubject = await prisma.attendanceLog.findMany({ where: { user_id: TEST_USER_ID, subject_id: sub1Id } })
     assert(bySubject.length > 0, `Filter by subject_id → ${bySubject.length} row(s)`)
     const byDate = await prisma.attendanceLog.findMany({ where: { user_id: TEST_USER_ID, date: '2000-01-01' } })
@@ -135,7 +161,7 @@ async function main() {
     const bySemester = await prisma.attendanceLog.findMany({ where: { user_id: TEST_USER_ID, semester: TEST_SEMESTER } })
     assert(bySemester.length > 0, `Filter by sentinel semester → ${bySemester.length} row(s)`)
 
-    section('9 · COUNTER CONSISTENCY (DB vs recomputed)')
+    section('10 · COUNTER CONSISTENCY (DB vs recomputed)')
     const allLogs = await prisma.attendanceLog.findMany({ where: { user_id: TEST_USER_ID, subject_id: sub1Id } })
     const computedTotal = allLogs.filter(l => isCountedAttendanceStatus(l.status)).length
     const computedAttended = allLogs.filter(l => isAttendedAttendanceStatus(l.status)).length
@@ -143,7 +169,7 @@ async function main() {
     assert(finalSub?.total === computedTotal, `DB total=${finalSub?.total} matches recomputed=${computedTotal}`)
     assert(finalSub?.attended === computedAttended, `DB attended=${finalSub?.attended} matches recomputed=${computedAttended}`)
 
-    section('10 · CALENDAR DATE GROUPING')
+    section('11 · CALENDAR DATE GROUPING')
     const calLogs = await prisma.attendanceLog.findMany({ where: { user_id: TEST_USER_ID, date: { gte: '2000-01-01', lte: '2000-01-31' } } })
     const byDay: Record<string, number> = {}
     for (const l of calLogs) { byDay[l.date] = (byDay[l.date] ?? 0) + 1 }

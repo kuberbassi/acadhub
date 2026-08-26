@@ -20,6 +20,22 @@ interface AttendanceModalProps {
     onLogsUpdate?: (dateStr: string, logs: any[]) => void;
 }
 
+const ATTENDANCE_STATUS_META: Record<string, { label: string; className: string }> = {
+    present: { label: 'Present', className: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' },
+    absent: { label: 'Absent', className: 'bg-red-500/10 text-red-500 border-red-500/20' },
+    late: { label: 'Late', className: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
+    medical: { label: 'Medical', className: 'bg-surface-container text-on-surface-variant border-outline' },
+    approved_medical: { label: 'Medical', className: 'bg-surface-container text-on-surface-variant border-outline' },
+    duty: { label: 'Duty', className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
+    cancelled: { label: 'Cancelled', className: 'bg-surface-container/50 text-on-surface-variant/70 border-outline' },
+    substituted: { label: 'Substituted', className: 'bg-primary/10 text-primary border-primary/20' },
+};
+
+const attendanceStatusMeta = (status: unknown) => ATTENDANCE_STATUS_META[String(status)] || {
+    label: String(status || 'Pending').replaceAll('_', ' '),
+    className: 'bg-surface-container text-on-surface-variant border-outline',
+};
+
 const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defaultDate, onSuccess, onLogsUpdate }) => {
     const confirm = useConfirm();
     const { showToast } = useToast();
@@ -226,7 +242,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
     };
 
     const markAllScheduled = async (status: 'present' | 'absent' | 'approved_medical' | 'cancelled') => {
-        if (isMarkingAll || scheduledClasses.length === 0) return;
+        if (isMarkingAll || processingIds.size > 0 || scheduledClasses.length === 0) return;
 
         setIsMarkAllOpen(false);
         setIsMarkingAll(true);
@@ -278,6 +294,40 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         } catch (error: any) {
             await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]);
             showToast('error', error.response?.data?.error || 'Failed to mark all classes');
+        } finally {
+            setIsMarkingAll(false);
+        }
+    };
+
+    const unmarkAllScheduled = async () => {
+        if (isMarkingAll || processingIds.size > 0) return;
+
+        const dateStr = formatLocalDate(selectedDate);
+        const visibleLogs = attendanceLogs.filter(log => log?.date === dateStr);
+        const logIds = [...new Set(visibleLogs
+            .map(log => String(log?._id || log?.id || ''))
+            .filter(logId => logId && !logId.startsWith('optimistic-')))];
+        setIsMarkAllOpen(false);
+        if (logIds.length === 0) {
+            showToast('error', 'No marked records to clear for this date');
+            return;
+        }
+
+        const isConfirmed = await confirm({
+            title: 'Unmark All Attendance',
+            message: `Clear all ${logIds.length} marked record${logIds.length === 1 ? '' : 's'} shown for ${dateStr}? This cannot affect another date.`,
+        });
+        if (!isConfirmed) return;
+
+        setIsMarkingAll(true);
+        try {
+            await attendanceService.unmarkAttendanceLogs(logIds, dateStr, currentSemester);
+            await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]);
+            showToast('success', `Cleared all ${logIds.length} marked record${logIds.length === 1 ? '' : 's'}`);
+            debouncedOnSuccess();
+        } catch (error: any) {
+            await Promise.all([fetchAttendanceLogs(selectedDate), loadClassesForDate(selectedDate, true)]).catch(() => {});
+            showToast('error', error.response?.data?.error || 'No records were cleared');
         } finally {
             setIsMarkingAll(false);
         }
@@ -430,6 +480,12 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
         const bTs = String(b?.timestamp || '');
         return aTs.localeCompare(bTs);
     });
+    const selectedDateStr = formatLocalDate(selectedDate);
+    const markedRecordsCount = attendanceLogs.filter(log =>
+        log?.date === selectedDateStr
+        && (log?._id || log?.id)
+        && !String(log?._id || log?.id).startsWith('optimistic-')
+    ).length;
 
 
 
@@ -469,12 +525,12 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                         <div>
                             <div className="h-7 mb-2.5 px-1 flex items-center justify-between">
                                 <h3 className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">Scheduled Classes</h3>
-                                {scheduledClasses.length > 0 && (
+                                {(scheduledClasses.length > 0 || markedRecordsCount > 0) && (
                                     <div ref={markAllRef} className="relative h-7">
                                         <button
                                             type="button"
                                             onClick={() => setIsMarkAllOpen(open => !open)}
-                                            disabled={isMarkingAll}
+                                            disabled={isMarkingAll || processingIds.size > 0}
                                             aria-label="Mark all scheduled classes"
                                             aria-expanded={isMarkAllOpen}
                                             className="h-7 w-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high disabled:opacity-50 transition-colors cursor-pointer"
@@ -495,12 +551,24 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                                         key={option.status}
                                                         type="button"
                                                         onClick={() => markAllScheduled(option.status as 'present' | 'absent' | 'approved_medical' | 'cancelled')}
-                                                        className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+                                                        disabled={scheduledClasses.length === 0}
+                                                        className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                                                     >
                                                         <span className={`h-2 w-2 rounded-full ${option.dot}`} />
                                                         {option.label}
                                                     </button>
                                                 ))}
+                                                <div className="my-1 border-t border-outline/60" />
+                                                <button
+                                                    type="button"
+                                                    onClick={unmarkAllScheduled}
+                                                    disabled={markedRecordsCount === 0}
+                                                    className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-xs font-semibold text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+                                                >
+                                                    <Trash2 size={13} />
+                                                    Unmark all
+                                                    {markedRecordsCount > 0 && <span className="ml-auto text-[9px] opacity-60">{markedRecordsCount}</span>}
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -578,17 +646,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                     {sortedAttendanceLogs.map((log: any, idx: number) => {
                                         const logSubjectId = String(log.subject_id || '');
                                         const logSubject = allSubjects.find((s: any) => String(s._id || s.id) === logSubjectId);
-
-                                        const statusColors: any = {
-                                            'present': 'text-green-600 dark:text-green-400 bg-green-500/10',
-                                            'absent': 'text-red-500 bg-red-500/10',
-                                            'late': 'text-orange-500 bg-orange-500/10',
-                                            'medical': 'text-on-surface bg-surface-container',
-                                            'approved_medical': 'text-on-surface bg-surface-container',
-                                            'cancelled': 'text-on-surface-variant bg-surface-container/50',
-                                            'substituted': 'text-primary bg-primary/10 border border-primary/20'
-                                        };
-                                        const statusColor = statusColors[log.status] || 'text-on-surface-variant bg-surface-container';
+                                        const statusMeta = attendanceStatusMeta(log.status);
                                         const logId = String(log._id || log.id || idx);
 
                                         return (
@@ -599,8 +657,8 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, defa
                                                 <div className="flex-1 min-w-0 pr-2">
                                                     <div className="font-bold text-xs text-on-surface truncate">{log.subject_name || log.subject_info?.name || logSubject?.name || 'Unknown Subject'}</div>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${statusColor}`}>
-                                                            {String(log.status).toUpperCase()}
+                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded border font-bold uppercase tracking-wider ${statusMeta.className}`}>
+                                                            {statusMeta.label}
                                                         </span>
                                                         {log.notes && (
                                                             <span className="text-[10px] text-on-surface-variant truncate">• {log.notes}</span>
@@ -646,6 +704,7 @@ const SubjectRow = ({
 }: any) => {
 
     const isMarked = status && status !== 'pending';
+    const statusMeta = attendanceStatusMeta(status);
 
     if (expanded) {
         return (
@@ -763,11 +822,8 @@ const SubjectRow = ({
                     </>
                 ) : (
                     <div className="flex items-center gap-1.5 mr-1">
-                        <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-bold ${status === 'present' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20' :
-                            status === 'absent' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
-                                'bg-surface-container text-on-surface-variant border border-outline'
-                            }`}>
-                            {status === 'approved_medical' ? 'Medical' : status}
+                        <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded border font-bold ${statusMeta.className}`}>
+                            {statusMeta.label}
                         </span>
 
                         <Button

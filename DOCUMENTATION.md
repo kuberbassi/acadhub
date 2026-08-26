@@ -246,6 +246,8 @@ Bulk writes are processed sequentially in timetable order. Each request includes
 
 New records receive their creation timestamp from PostgreSQL. Sequential creation gives deterministic request order without accepting a client-provided timestamp. Updating an existing mark preserves its original attendance-log creation timestamp; a separate system activity entry records the edit event and its time.
 
+`POST /api/attendance/unmark-all` has different safety requirements because deletion affects counters and substitution companions. The frontend snapshots the explicit database IDs currently shown under `Marked Records` and sends those IDs with the selected date and semester. The backend never selects records by creation timestamp or timetable inference. A single PostgreSQL data-modifying CTE verifies ownership, exact date, and semester membership; expands required substitution companion records; deletes the deduplicated set; and applies per-subject counter deltas once. If any requested ID is stale or outside that scope, the guarded delete affects zero rows and the API returns `409 STALE_ATTENDANCE`. The entire operation therefore commits completely or leaves every record and counter unchanged.
+
 ### 3.6 Attendance Status and Percentage Rules
 
 The status counters are centralized in `api-node/src/utils/attendanceStatus.ts`:

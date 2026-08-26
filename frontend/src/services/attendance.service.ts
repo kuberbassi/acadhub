@@ -199,6 +199,16 @@ export const attendanceService = {
         clearDerivedCaches();
     },
 
+    unmarkAttendanceLogs: async (logIds: string[], date: string, semester: number): Promise<{ deleted_count: number; requested_count: number }> => {
+        const response = await api.post('/api/attendance/unmark-all', {
+            log_ids: logIds,
+            date,
+            semester,
+        });
+        clearDerivedCaches();
+        return response.data.data;
+    },
+
     getCalendarData: async (year: number, month: number, semester?: number) => {
         const m = String(month).padStart(2, '0');
         const monthStr = `${year}-${m}`;

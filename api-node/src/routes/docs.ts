@@ -62,6 +62,13 @@ const openApiSpec = {
         summary: 'Mark attendance for a subject and date',
       },
     },
+    '/attendance/unmark-all': {
+      post: {
+        tags: ['attendance'],
+        summary: 'Atomically clear an exact date-modal attendance snapshot',
+        description: 'Validates explicit log IDs against the authenticated user, selected date, and semester before deleting records and applying counter deltas.',
+      },
+    },
     '/academic/subjects': {
       get: {
         tags: ['academic'],

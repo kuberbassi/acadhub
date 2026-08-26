@@ -7,6 +7,7 @@ import { getClientIp } from '../utils/ip.js'
 import { ATTENDED_ATTENDANCE_STATUSES, COUNTED_ATTENDANCE_STATUSES, isAttendedAttendanceStatus, isCountedAttendanceStatus } from '../utils/attendanceStatus.js'
 import { getSlotType, scoreScheduleBySubjects } from '../utils/timetableSlots.js'
 import { buildViewCacheId, clearUserViewCache, readViewCache, writeViewCache } from '../utils/viewCache.js'
+import { unmarkAttendanceLogsAtomic } from '../utils/unmarkAttendance.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -75,8 +76,7 @@ function buildSemesterAwareAttendanceFilter(semester: number) {
   return {
     OR: [
       { semester },
-      { semester: null },
-      { subject: { is: { semester } } },
+      { semester: null, subject: { is: { semester } } },
     ],
   }
 }
@@ -91,6 +91,12 @@ const MarkSchema = z.object({
   notes: z.string().max(500).optional(),
   semester: z.number().int().min(1).max(12).optional(),
   substituted_by: z.string().min(1).optional(),
+})
+
+const UnmarkAllSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  semester: z.number().int().min(1).max(12),
+  log_ids: z.array(z.string().min(1)).min(1).max(100),
 })
 
 const EditLogSchema = z.object({
@@ -198,6 +204,34 @@ router.post('/mark', async (req: AuthRequest, res) => {
     if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'VALIDATION_ERROR', 400); return }
     console.error('[attendance/mark]', err)
     fail(res, 'Failed to mark attendance', 'SERVER_ERROR', 500)
+  }
+})
+
+// Atomically clear the exact records displayed in a date modal. Timestamp is
+// deliberately not used for identity; ownership + date + explicit log IDs are.
+router.post('/unmark-all', async (req: AuthRequest, res) => {
+  try {
+    const body = UnmarkAllSchema.parse(req.body)
+    const userId = req.userId!
+    const requestedIds = [...new Set(body.log_ids)]
+
+    const result = await unmarkAttendanceLogsAtomic(userId, body.date, body.semester, requestedIds)
+
+    if (result.requested_count !== requestedIds.length) {
+      throw new Error('UNMARK_ALL_STALE')
+    }
+
+    await clearUserViewCache(userId).catch(() => {})
+    void sysLog(req, userId, 'Attendance Bulk Cleared', `Cleared ${result.deleted_count} attendance records on ${body.date}`).catch(() => {})
+    ok(res, result)
+  } catch (err) {
+    if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'VALIDATION_ERROR', 400); return }
+    if (err instanceof Error && err.message === 'UNMARK_ALL_STALE') {
+      fail(res, 'Attendance changed before it could be cleared. Refresh and try again.', 'STALE_ATTENDANCE', 409)
+      return
+    }
+    console.error('[attendance/unmark-all]', err)
+    fail(res, 'Failed to clear attendance records', 'SERVER_ERROR', 500)
   }
 })
 
