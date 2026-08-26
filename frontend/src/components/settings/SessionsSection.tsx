@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Shield, Monitor, Smartphone, RefreshCw, LogOut, CheckCircle } from 'lucide-react';
 import Loader from '@/components/ui/Loader';
 import { authService } from '@/services/auth.service';
@@ -23,23 +23,28 @@ const SessionsSection: React.FC<SessionsSectionProps> = ({ showToast }) => {
   const [loading, setLoading] = useState(true);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
+  const showToastRef = useRef(showToast);
 
-  const loadSessions = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await authService.getActiveSessions();
-      setSessions(data || []);
-    } catch (err) {
-      console.error(err);
-      showToast('error', 'Failed to load active sessions');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    showToastRef.current = showToast;
   }, [showToast]);
 
   useEffect(() => {
+    let active = true;
+    const loadSessions = async () => {
+      try {
+        const data = await authService.getActiveSessions();
+        if (active) setSessions(data || []);
+      } catch (err) {
+        console.error(err);
+        if (active) showToastRef.current('error', 'Failed to load active sessions');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
     void loadSessions();
-  }, [loadSessions]);
+    return () => { active = false; };
+  }, []);
 
   const handleRevoke = async (id: string, name: string) => {
     const isConfirmed = await confirm({

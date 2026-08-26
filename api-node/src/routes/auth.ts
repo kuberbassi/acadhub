@@ -102,17 +102,24 @@ type AuthSession = {
 
 async function getAuthSessions(userId: string): Promise<AuthSession[]> {
   const now = new Date()
-  
-  // Clean up expired sessions and sessions rotated more than 2 minutes ago
-  await sessionDb.deleteMany({
+
+  // Prisma's Neon HTTP adapter cannot run the implicit transactions used by
+  // deleteMany/updateMany. Resolve exact IDs first and delete each row with a
+  // standalone statement so session management works in both HTTP and pooled
+  // database modes.
+  const staleSessions = await sessionDb.findMany({
     where: {
       user_id: userId,
       OR: [
         { refresh_expires_at: { lt: now } },
         { rotated_at: { lt: new Date(Date.now() - 2 * 60 * 1000) } }
       ]
-    }
-  }).catch(() => null)
+    },
+    select: { id: true },
+  }).catch(() => [])
+  await Promise.all(staleSessions.map((session: { id: string }) =>
+    sessionDb.delete({ where: { id: session.id } }).catch(() => null)
+  ))
 
   const sessions = await sessionDb.findMany({
     where: { user_id: userId },
@@ -150,31 +157,37 @@ async function issueAuthSession(req: any, res: any, userId: string, replaceOldHa
 
   // 1. If we are replacing an old token (rotating), we mark it as rotated with a grace period
   if (replaceOldHash) {
-    await sessionDb.updateMany({
+    await sessionDb.update({
       where: { refresh_token_hash: replaceOldHash },
       data: { rotated_at: now }
     }).catch(() => null)
   }
 
   // 2. Clean up any existing sessions for this device ID to avoid bloating
+  let duplicateSessions: Array<{ id: string }> = []
   if (deviceId) {
-    await sessionDb.deleteMany({
+    duplicateSessions = await sessionDb.findMany({
       where: {
         user_id: userId,
         device_id: deviceId,
         refresh_token_hash: { not: replaceOldHash ?? '' }
-      }
-    }).catch(() => null)
+      },
+      select: { id: true },
+    })
   } else if (user_agent && ip) {
-    await sessionDb.deleteMany({
+    duplicateSessions = await sessionDb.findMany({
       where: {
         user_id: userId,
         user_agent,
         ip,
         refresh_token_hash: { not: replaceOldHash ?? '' }
-      }
-    }).catch(() => null)
+      },
+      select: { id: true },
+    })
   }
+  await Promise.all(duplicateSessions.map((session) =>
+    sessionDb.delete({ where: { id: session.id } }).catch(() => null)
+  ))
 
   // 3. Create the new session
   await sessionDb.create({
@@ -195,10 +208,9 @@ async function issueAuthSession(req: any, res: any, userId: string, replaceOldHa
     orderBy: { last_active_at: 'desc' }
   })
   if (activeSessions.length > 10) {
-    const toDelete = activeSessions.slice(10).map((s: any) => s.id)
-    await sessionDb.deleteMany({
-      where: { id: { in: toDelete } }
-    }).catch(() => null)
+    await Promise.all(activeSessions.slice(10).map((session: AuthSession) =>
+      sessionDb.delete({ where: { id: session.id } }).catch(() => null)
+    ))
   }
 
   setAccessCookie(res, accessToken)
@@ -314,7 +326,13 @@ router.post('/refresh', async (req, res) => {
         return ok(res, { user: userResponse(user) })
       } else {
         // Rotated too long ago: security breach / token reuse! Revoke all sessions for security!
-        await sessionDb.deleteMany({ where: { user_id: session.user_id } }).catch(() => null)
+        const userSessions = await sessionDb.findMany({
+          where: { user_id: session.user_id },
+          select: { id: true },
+        }).catch(() => [])
+        await Promise.all(userSessions.map((item: { id: string }) =>
+          sessionDb.delete({ where: { id: item.id } }).catch(() => null)
+        ))
         clearAuthCookies(res)
         return fail(res, 'Refresh token reuse detected', 'REFRESH_INVALID', 401)
       }
@@ -433,10 +451,10 @@ router.get('/sessions', requireAuth, async (req: AuthRequest, res) => {
     const currentRefreshToken = readCookie(req, REFRESH_COOKIE_NAME)
     const currentHash = currentRefreshToken ? hashRefreshToken(currentRefreshToken) : null
     if (currentHash) {
-      await sessionDb.updateMany({
-        where: { user_id: userId, refresh_token_hash: currentHash },
+      await sessionDb.update({
+        where: { refresh_token_hash: currentHash },
         data: { last_active_at: new Date() },
-      })
+      }).catch(() => null)
     }
     const sessions = await getAuthSessions(userId)
 
@@ -489,18 +507,16 @@ router.delete('/sessions', requireAuth, async (req: AuthRequest, res) => {
     const currentRefreshToken = readCookie(req, REFRESH_COOKIE_NAME)
     const currentHash = currentRefreshToken ? hashRefreshToken(currentRefreshToken) : null
 
-    if (currentHash) {
-      await sessionDb.deleteMany({
-        where: {
-          user_id: userId,
-          refresh_token_hash: { not: currentHash }
-        }
-      })
-    } else {
-      await sessionDb.deleteMany({
-        where: { user_id: userId }
-      })
-    }
+    const sessionsToRevoke = await sessionDb.findMany({
+      where: {
+        user_id: userId,
+        ...(currentHash ? { refresh_token_hash: { not: currentHash } } : {}),
+      },
+      select: { id: true },
+    })
+    await Promise.all(sessionsToRevoke.map((session: { id: string }) =>
+      sessionDb.delete({ where: { id: session.id } })
+    ))
     
     void logAuthEvent(req, userId, 'auth_revoke_other_sessions', 'Revoked all other active sessions')
     ok(res, { message: 'All other sessions revoked successfully' })

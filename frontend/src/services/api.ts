@@ -1,6 +1,11 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { dispatchGlobalToast } from '@/components/ui/Toast';
 
+declare module 'axios' {
+    interface AxiosRequestConfig {
+        _skipRetry?: boolean;
+    }
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 let refreshPromise: Promise<unknown> | null = null;
@@ -124,7 +129,7 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        if (shouldRetry(error)) {
+        if (!config?._skipRetry && shouldRetry(error)) {
             config._retry = (config._retry || 0) + 1;
             const maxRetries = 3;
             if (config._retry <= maxRetries) {

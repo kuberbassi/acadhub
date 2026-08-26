@@ -2,6 +2,15 @@ import api from './api';
 import type { User } from '@/types';
 import { attendanceService } from './attendance.service';
 
+export interface AuthSessionSummary {
+    id: string;
+    device_id?: string | null;
+    ip: string;
+    user_agent: string;
+    refresh_issued_at: number;
+    last_active_at: number;
+    is_current: boolean;
+}
 
 export const authService = {
     // Initiate Google OAuth login
@@ -81,8 +90,10 @@ export const authService = {
     },
 
     // Fetch active sessions
-    getActiveSessions: async (): Promise<any[]> => {
-        const response = await api.get('/api/auth/sessions');
+    getActiveSessions: async (): Promise<AuthSessionSummary[]> => {
+        // This screen already exposes an explicit failure state. Avoid turning
+        // one server failure into four requests and tripping rate limits.
+        const response = await api.get('/api/auth/sessions', { _skipRetry: true });
         return response.data.data ?? response.data;
     },
 
