@@ -430,10 +430,15 @@ router.post('/google/link-drive', requireAuth, async (req: AuthRequest, res) => 
 router.get('/sessions', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
-    const sessions = await getAuthSessions(userId)
-    
     const currentRefreshToken = readCookie(req, REFRESH_COOKIE_NAME)
     const currentHash = currentRefreshToken ? hashRefreshToken(currentRefreshToken) : null
+    if (currentHash) {
+      await sessionDb.updateMany({
+        where: { user_id: userId, refresh_token_hash: currentHash },
+        data: { last_active_at: new Date() },
+      })
+    }
+    const sessions = await getAuthSessions(userId)
 
     const payload = sessions.map(s => ({
       id: s.id,

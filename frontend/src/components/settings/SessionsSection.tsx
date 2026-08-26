@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Shield, Monitor, Smartphone, RefreshCw, LogOut, CheckCircle } from 'lucide-react';
 import Loader from '@/components/ui/Loader';
 import { authService } from '@/services/auth.service';
@@ -24,11 +24,7 @@ const SessionsSection: React.FC<SessionsSectionProps> = ({ showToast }) => {
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
 
-  useEffect(() => {
-    void loadSessions();
-  }, []);
-
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     setLoading(true);
     try {
       const data = await authService.getActiveSessions();
@@ -39,7 +35,11 @@ const SessionsSection: React.FC<SessionsSectionProps> = ({ showToast }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    void loadSessions();
+  }, [loadSessions]);
 
   const handleRevoke = async (id: string, name: string) => {
     const isConfirmed = await confirm({
@@ -113,11 +113,14 @@ const SessionsSection: React.FC<SessionsSectionProps> = ({ showToast }) => {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString(undefined, {
+    return new Date(timestamp).toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      second: '2-digit',
+      timeZoneName: 'short',
     });
   };
 
@@ -187,7 +190,7 @@ const SessionsSection: React.FC<SessionsSectionProps> = ({ showToast }) => {
                     <p className="text-[11px] text-on-surface-variant/60 font-medium flex flex-wrap gap-x-2.5 gap-y-1">
                       <span>IP: {session.ip}</span>
                       <span className="text-on-surface-variant/20">•</span>
-                      <span>Last active: {formatDate(session.last_active_at)}</span>
+                      <span>{session.is_current ? 'Active now' : `Last verified: ${formatDate(session.last_active_at)}`}</span>
                     </p>
                   </div>
                 </div>

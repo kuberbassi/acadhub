@@ -261,19 +261,21 @@ const EditSubjectModal: React.FC<EditSubjectModalProps> = ({ isOpen, onClose, su
                     <button
                         type="button"
                         onClick={() => setIsSyllabusExpanded(true)}
-                        className="group relative w-full min-h-[92px] rounded-lg border border-outline bg-surface px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-surface-container/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        className="group w-full min-h-[92px] rounded-lg border border-outline bg-surface px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-surface-container/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                         aria-label="Expand syllabus and notes editor"
                     >
-                        <div className="flex items-start gap-3 pr-7">
+                        <div className="flex min-w-0 items-center justify-between gap-3">
+                            <div className="flex min-w-0 flex-1 items-start gap-3">
                             <FileText className="mt-0.5 h-5 w-5 shrink-0 text-on-surface-variant/40 group-hover:text-primary/70" />
-                            <p className={`line-clamp-2 whitespace-pre-line text-sm leading-6 ${formData.syllabus ? 'text-on-surface' : 'italic text-on-surface-variant/35'}`}>
+                            <p className={`line-clamp-2 min-w-0 whitespace-pre-line text-sm leading-6 ${formData.syllabus ? 'text-on-surface' : 'italic text-on-surface-variant/35'}`}>
                                 {formData.syllabus || 'Add syllabus topics or important notes…'}
                             </p>
+                            </div>
+                            <span className="flex h-9 shrink-0 items-center gap-1.5 self-center rounded-md border border-outline/50 bg-surface-container/40 px-2.5 text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/50 transition-colors group-hover:border-primary/30 group-hover:text-primary">
+                                <Maximize2 className="h-3.5 w-3.5" />
+                                <span className="hidden min-[380px]:inline">Expand</span>
+                            </span>
                         </div>
-                        <Maximize2 className="absolute right-3 top-3 h-4 w-4 text-on-surface-variant/30 transition-colors group-hover:text-primary" />
-                        <span className="absolute bottom-2.5 right-3 text-[9px] font-bold uppercase tracking-wider text-on-surface-variant/35 group-hover:text-primary/70">
-                            Expand
-                        </span>
                     </button>
                 </div>
 

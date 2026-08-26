@@ -80,6 +80,8 @@ Contains base profile data, targets, and auth configurations. Deleting a user ca
 ### 2.2 Model: `UserSession` (Table: `user_sessions`)
 Represents active refresh tokens, logged-in browsers, and session parameters.
 
+The active-device view updates the current session's `last_active_at` when it is loaded. The current device is labelled **Active now**; other devices show their last server-verified session activity with seconds and the browser's explicit timezone. API timestamps remain Unix milliseconds, avoiding ambiguous timezone-free date strings.
+
 | Field Name | Type | Attributes / Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `String` | `@id`, `@default(cuid())` | Unique session identifier. |
