@@ -405,10 +405,10 @@ const Dashboard: React.FC = () => {
             ) : (
                 <div className="space-y-6">
                     {/* Bento Grid */}
-                    <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-3">
+                    <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-3 md:items-stretch">
                         
                         {/* Bento Card 1: Academic Health */}
-                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)] md:h-full">
                             <div className="flex items-center justify-between mb-6">
                                 <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Overall Academic Health</span>
                                 <Activity size={13} className="text-on-surface-variant/40" />
@@ -456,7 +456,7 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         {/* Bento Card 2: Student Target */}
-                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)] md:h-full">
                             <div>
                                 <div className="flex items-center justify-between mb-6">
                                     <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Academic Target</span>
@@ -540,19 +540,19 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         {/* Bento Card 3: Today's Schedule */}
-                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+                        <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)] md:h-full">
                             <div className="flex min-h-0 flex-1 flex-col">
                                 <div className="flex items-center justify-between mb-6">
                                     <span className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Today's Schedule</span>
                                     <Flame size={13} className="text-on-surface-variant/40" />
                                 </div>
                                 
-                                <div className="my-2 min-h-0 flex-1 max-h-[360px] overflow-y-auto custom-scrollbar pr-1 md:flex md:max-h-none md:flex-col">
+                                <div className="my-2 min-h-0 flex-1 max-h-[360px] overflow-y-auto custom-scrollbar pr-1 md:flex md:max-h-[430px] md:flex-col">
                                     {todayClasses.length > 0 ? (
                                         todayClasses.map((cls, idx) => {
                                             const sub = findSubjectForSlot(subjects, cls);
                                             return (
-                                                <div key={idx} className="flex min-h-11 items-center gap-3 py-2.5 border-b border-outline/30 last:border-b-0 md:flex-1">
+                                                <div key={idx} className="flex min-h-11 items-center gap-3 py-2.5 border-b border-outline/30 last:border-b-0">
                                                     <div className="text-center bg-surface-container border border-outline/40 rounded-md px-2 py-0.5 shrink-0 min-w-[55px]">
                                                         <span className="block text-[8px] font-bold text-on-surface-variant/50 leading-none">{cls.start_time || cls.startTime || '—'}</span>
                                                     </div>
