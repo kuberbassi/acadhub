@@ -285,4 +285,6 @@ Both `medical` and `approved_medical` are subtracted. The count is derived from 
 
 Calendar day cells display up to six compact log indicators in stored log order. Present uses the theme foreground colour, Absent red, Medical Leave blue, Cancelled slate, and Substitution violet; other supported attended states fall back to orange. The legend uses the same mapping.
 
+The floating radial navigation displays one centred page-name label above the expanded fan. It defaults to the current route and updates as the pointer focuses another bubble; individual bubbles remain icon-only to keep the compact layout uncluttered.
+
 Frontend attendance and course date defaults use `formatLocalDate` (`YYYY-MM-DD` from local calendar components) rather than slicing a UTC ISO timestamp. This prevents late-night or early-morning actions from being assigned to an adjacent date because of timezone conversion.

@@ -4,25 +4,27 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, CalendarClock, Settings,
     GraduationCap, Sun, Moon,
-    CalendarDays, Beaker, LogOut, ChevronRight
+    CalendarDays, Beaker, LogOut, ChevronRight, type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 import { haptics } from '@/utils/haptics';
 
-interface BottomNavProps {}
-
 const radialItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Schedule', href: '/timetable', icon: CalendarClock },
+    { name: 'Timetable', href: '/timetable', icon: CalendarClock },
     { name: 'Calendar', href: '/calendar', icon: CalendarDays },
     { name: 'Courses', href: '/courses', icon: GraduationCap },
-    { name: 'Assignments', href: '/practicals', icon: Beaker },
+    { name: 'Assignments & Practicals', href: '/practicals', icon: Beaker },
     { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-const BottomNav: React.FC<BottomNavProps> = () => {
+type CenterIconInfo =
+    | { type: 'logo'; element: string; key: string }
+    | { type: 'icon'; element: LucideIcon; key: string };
+
+const BottomNav: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
@@ -129,16 +131,18 @@ const BottomNav: React.FC<BottomNavProps> = () => {
     }, [pointerDownTime, isHolding, center, activeIdx, lastTap, navigate]);
 
     // Determines which icon to display at the center of the bubble button
-    const getCenterIcon = () => {
+    const currentNavItem = radialItems.find(item => item.href === location.pathname);
+    const focusedNavItem = activeIdx !== null ? radialItems[activeIdx] : currentNavItem;
+
+    const getCenterIcon = (): CenterIconInfo => {
         if (activeIdx !== null) {
             return { type: 'icon', element: radialItems[activeIdx].icon, key: `hovered-${activeIdx}` };
         }
         if (isHolding) {
             return { type: 'logo', element: '/Semester-logo-96.png', key: 'logo' };
         }
-        const currentItem = radialItems.find(item => item.href === location.pathname);
-        if (currentItem) {
-            return { type: 'icon', element: currentItem.icon, key: `current-${location.pathname}` };
+        if (currentNavItem) {
+            return { type: 'icon', element: currentNavItem.icon, key: `current-${location.pathname}` };
         }
         return { type: 'logo', element: '/Semester-logo-96.png', key: 'logo' };
     };
@@ -205,7 +209,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
                                 animate={{ scale: 1, opacity: 1, rotate: 0 }}
                                 exit={{ scale: 0.7, opacity: 0, rotate: 30 }}
                                 transition={{ duration: 0.12 }}
-                                src={centerIconInfo.element as string}
+                                src={centerIconInfo.element}
                                 alt="Semester"
                                 className={`w-6.5 h-6.5 object-contain ${
                                     isHolding 
@@ -215,7 +219,7 @@ const BottomNav: React.FC<BottomNavProps> = () => {
                             />
                         ) : (
                             (() => {
-                                const IconComp = centerIconInfo.element as React.ComponentType<any>;
+                                const IconComp = centerIconInfo.element;
                                 return (
                                     <motion.div
                                         key={centerIconInfo.key}
@@ -237,6 +241,23 @@ const BottomNav: React.FC<BottomNavProps> = () => {
             <AnimatePresence>
                 {isHolding && (
                     <div className="fixed inset-0 z-[998] pointer-events-none select-none bg-black/15 backdrop-blur-[2px]">
+                        <AnimatePresence mode="wait">
+                            {focusedNavItem && (
+                                <motion.div
+                                    key={focusedNavItem.href}
+                                    initial={{ opacity: 0, x: '-50%', y: 6, scale: 0.96 }}
+                                    animate={{ opacity: 1, x: '-50%', y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, x: '-50%', y: -4, scale: 0.96 }}
+                                    transition={{ duration: 0.12 }}
+                                    role="status"
+                                    aria-live="polite"
+                                    className="absolute z-[2] max-w-[min(16rem,calc(100vw-2rem))] rounded-full border border-outline/70 bg-surface/95 px-4 py-2 text-center text-xs font-bold tracking-wide text-on-surface shadow-lg backdrop-blur-md"
+                                    style={{ left: center.x, top: Math.max(16, center.y - 174) }}
+                                >
+                                    {focusedNavItem.name}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                         <div 
                             className="absolute rounded-full bg-primary/5 border border-primary/20 pointer-events-none animate-pulse"
                             style={{
