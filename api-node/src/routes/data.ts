@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { normalizeRelatedInstant } from '../utils/timestamps.js'
 import crypto, { randomUUID } from 'crypto'
 import jwt from 'jsonwebtoken'
 import { requireAuth, type AuthRequest } from '../middleware/auth.js'
@@ -294,7 +295,12 @@ router.get('/backups', async (req: AuthRequest, res) => {
       orderBy: { created_at: 'desc' },
       take: 10,
     })
-    ok(res, { backups: backups.map((b: any) => ({ ...b, _id: b.id })) })
+    ok(res, { backups: backups.map(b => ({
+      ...b,
+      _id: b.id,
+      created_at: normalizeRelatedInstant(b.id, b.created_at, b.created_at),
+      expires_at: normalizeRelatedInstant(b.id, b.created_at, b.expires_at),
+    })) })
   } catch (err) {
     console.error('[data/backups GET]', err)
     fail(res, 'Failed to list backups', 'LIST_FAILED', 500)
@@ -308,7 +314,8 @@ router.post('/restore_backup/:backupId', async (req: AuthRequest, res) => {
 
     const backup = await prisma.userBackup.findFirst({ where: { id: backupId, user_id: userId } })
     if (!backup) { fail(res, 'Backup not found or access denied', 'NOT_FOUND', 404); return }
-    if (backup.expires_at && backup.expires_at < new Date()) {
+    const normalizedExpiry = normalizeRelatedInstant(backup.id, backup.created_at, backup.expires_at)
+    if (normalizedExpiry && normalizedExpiry < new Date()) {
       fail(res, 'This backup has expired', 'EXPIRED', 410); return
     }
 

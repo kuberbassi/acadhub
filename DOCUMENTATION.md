@@ -206,6 +206,8 @@ Handles secure automated backups.
 ### 2.9 Model: `SystemLog` (Table: `system_logs`)
 Tracks user logs and system heartbeats.
 
+The activity screen requests seven events initially and seven more per explicit **Load more activity** action. The API normalizes timezone-less Prisma timestamps against the independent UTC creation time embedded in classic CUID event IDs, while UUID events written atomically with PostgreSQL `CURRENT_TIMESTAMP` remain unchanged. The same normalization is applied to session activity/expiry values, backup times, and activity timestamps supplied to the AI context; the browser performs only the final conversion to the device timezone. Calendar attendance dates remain date-only strings and are never passed through this instant-time conversion.
+
 | Field Name | Type | Attributes / Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `String` | `@id`, `@default(cuid())` | Unique system log entry identifier. |

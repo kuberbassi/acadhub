@@ -9,6 +9,7 @@ import { ok, fail } from '../utils/response.js'
 import { getClientIp } from '../utils/ip.js'
 import { triggerAutoBackupIfNeeded } from '../utils/googleDrive.js'
 import { encryptSecret } from '../utils/secrets.js'
+import { normalizeRelatedInstant } from '../utils/timestamps.js'
 
 const router = Router()
 const googleClient = new OAuth2Client(ENV.GOOGLE_CLIENT_ID)
@@ -107,16 +108,15 @@ async function getAuthSessions(userId: string): Promise<AuthSession[]> {
   // deleteMany/updateMany. Resolve exact IDs first and delete each row with a
   // standalone statement so session management works in both HTTP and pooled
   // database modes.
-  const staleSessions = await sessionDb.findMany({
-    where: {
-      user_id: userId,
-      OR: [
-        { refresh_expires_at: { lt: now } },
-        { rotated_at: { lt: new Date(Date.now() - 2 * 60 * 1000) } }
-      ]
-    },
-    select: { id: true },
+  const candidateSessions = await sessionDb.findMany({
+    where: { user_id: userId },
+    select: { id: true, refresh_issued_at: true, refresh_expires_at: true, rotated_at: true },
   }).catch(() => [])
+  const staleSessions = candidateSessions.filter((session: Pick<AuthSession, 'id' | 'refresh_issued_at' | 'refresh_expires_at' | 'rotated_at'>) => {
+    const expiry = normalizeRelatedInstant(session.id, session.refresh_issued_at, session.refresh_expires_at)!
+    const rotated = normalizeRelatedInstant(session.id, session.refresh_issued_at, session.rotated_at)
+    return expiry < now || Boolean(rotated && rotated < new Date(now.getTime() - 2 * 60 * 1000))
+  })
   await Promise.all(staleSessions.map((session: { id: string }) =>
     sessionDb.delete({ where: { id: session.id } }).catch(() => null)
   ))
@@ -311,7 +311,8 @@ router.post('/refresh', async (req, res) => {
 
     // Check if the session is rotated and in grace period (60 seconds)
     if (session.rotated_at) {
-      const isWithinGracePeriod = Date.now() - session.rotated_at.getTime() < 60_000
+      const rotatedAt = normalizeRelatedInstant(session.id, session.refresh_issued_at, session.rotated_at)!
+      const isWithinGracePeriod = Date.now() - rotatedAt.getTime() < 60_000
       if (isWithinGracePeriod) {
         // Return a fresh access token, but reuse the rotated refresh token cookie (do not rotate again)
         const accessToken = signAccessToken(session.user_id)
@@ -339,7 +340,8 @@ router.post('/refresh', async (req, res) => {
     }
 
     // Check if session is expired
-    if (session.refresh_expires_at.getTime() < Date.now()) {
+    const refreshExpiresAt = normalizeRelatedInstant(session.id, session.refresh_issued_at, session.refresh_expires_at)!
+    if (refreshExpiresAt.getTime() < Date.now()) {
       await sessionDb.delete({ where: { id: session.id } }).catch(() => null)
       clearAuthCookies(res)
       return fail(res, 'Refresh token expired', 'REFRESH_EXPIRED', 401)
@@ -463,8 +465,8 @@ router.get('/sessions', requireAuth, async (req: AuthRequest, res) => {
       device_id: s.device_id || null,
       ip: s.ip || 'Unknown',
       user_agent: s.user_agent || 'Unknown',
-      refresh_issued_at: s.refresh_issued_at.getTime(),
-      last_active_at: s.last_active_at.getTime(),
+      refresh_issued_at: normalizeRelatedInstant(s.id, s.refresh_issued_at, s.refresh_issued_at)!.getTime(),
+      last_active_at: normalizeRelatedInstant(s.id, s.refresh_issued_at, s.last_active_at)!.getTime(),
       is_current: s.refresh_token_hash === currentHash,
     }))
 

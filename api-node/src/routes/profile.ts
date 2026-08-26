@@ -7,6 +7,7 @@ import { getClientIp } from '../utils/ip.js'
 import multer from 'multer'
 import sharp from 'sharp'
 import { buildViewCacheId, clearUserViewCache, readViewCache, writeViewCache } from '../utils/viewCache.js'
+import { normalizeLegacyPrismaInstant } from '../utils/timestamps.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -314,23 +315,28 @@ router.post('/biometric/register', async (req: AuthRequest, res) => {
 // â”€â”€â”€ System Logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const ActivityLogsQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(200).optional().default(100),
+  limit: z.coerce.number().int().min(1).max(25).optional().default(7),
+  offset: z.coerce.number().int().min(0).max(500).optional().default(0),
+  snapshot: z.string().datetime().optional(),
 })
 
 router.get('/logs', async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
-    const { limit } = ActivityLogsQuerySchema.parse(req.query)
-    const cacheId = buildViewCacheId('system_logs', { limit })
-    const cached = await readViewCache<any>(userId, cacheId)
-    if (cached) { ok(res, cached, 200, 0); return }
-    const logs = await prisma.systemLog.findMany({
+    const { limit, offset, snapshot } = ActivityLogsQuerySchema.parse(req.query)
+    const snapshotAt = snapshot ? new Date(snapshot) : new Date()
+    const auditWindow = await prisma.systemLog.findMany({
       where: { user_id: userId },
       orderBy: { timestamp: 'desc' },
-      take: limit,
+      take: 526,
     })
-    ok(res, logs, 200, 0)
-    void writeViewCache(userId, cacheId, logs, 60_000).catch(() => {})
+    const normalized = auditWindow
+      .map(log => ({ ...log, timestamp: normalizeLegacyPrismaInstant(log.id, log.timestamp) }))
+      .filter(log => log.timestamp <= snapshotAt)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime() || b.id.localeCompare(a.id))
+    const items = normalized.slice(offset, offset + limit)
+    const payload = { items, has_more: normalized.length > offset + limit, next_offset: offset + items.length, snapshot: snapshotAt.toISOString() }
+    ok(res, payload, 200, 0)
   } catch (err) {
     if (err instanceof z.ZodError) { fail(res, err.errors[0]?.message || 'Validation failed', 'VALIDATION_ERROR', 400); return }
     console.error('[profile/logs]', err)

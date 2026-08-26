@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, CheckCircle2, Clock, FileText, RefreshCw, Settings as SettingsIcon, Trash2, User } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Activity, CheckCircle2, Clock, FileText, Settings as SettingsIcon, Trash2, User } from 'lucide-react';
 import Loader from '@/components/ui/Loader';
 import type { SystemLog } from '@/types';
 import { attendanceService } from '@/services/attendance.service';
+
+const PAGE_SIZE = 7;
 
 const parseTimestamp = (log: SystemLog) => {
     const raw = typeof log.timestamp === 'string' ? log.timestamp : (log.timestamp as { $date?: string })?.$date;
@@ -13,34 +15,47 @@ const parseTimestamp = (log: SystemLog) => {
 const SystemLogsSection: React.FC = () => {
     const [logs, setLogs] = useState<SystemLog[]>([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [nextOffset, setNextOffset] = useState(0);
+    const [snapshot, setSnapshot] = useState<string>();
     const [error, setError] = useState('');
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    const loadLogs = useCallback(async (refresh = false) => {
-        if (refresh) setRefreshing(true);
-        else setLoading(true);
-        setError('');
-        try {
-            const data = await attendanceService.getSystemLogs(100);
-            setLogs(data);
-            setLastUpdated(new Date());
-        } catch (err) {
+    useEffect(() => {
+        let active = true;
+        void attendanceService.getSystemLogs(PAGE_SIZE, 0).then(page => {
+            if (!active) return;
+            setLogs(page.items);
+            setHasMore(page.has_more);
+            setNextOffset(page.next_offset);
+            setSnapshot(page.snapshot);
+        }).catch(err => {
             console.error(err);
-            setError('Activity could not be refreshed. Your existing records have been kept.');
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
+            if (active) setError('Activity history could not be loaded. Please try again later.');
+        }).finally(() => { if (active) setLoading(false); });
+        return () => { active = false; };
     }, []);
 
-    useEffect(() => { void loadLogs(); }, [loadLogs]);
+    const loadMore = async () => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
+        setError('');
+        try {
+            const page = await attendanceService.getSystemLogs(PAGE_SIZE, nextOffset, snapshot);
+            setLogs(current => [...current, ...page.items.filter(item => !current.some(existing => existing.id === item.id))]);
+            setHasMore(page.has_more);
+            setNextOffset(page.next_offset);
+        } catch (err) {
+            console.error(err);
+            setError('More activity could not be loaded. Your existing records have been kept.');
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
     const groupedLogs = useMemo(() => logs.reduce((acc: Record<string, SystemLog[]>, log) => {
         const timestamp = parseTimestamp(log);
-        const date = timestamp
-            ? timestamp.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-            : 'Unknown date';
+        const date = timestamp ? timestamp.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown date';
         if (!acc[date]) acc[date] = [];
         acc[date].push(log);
         return acc;
@@ -56,46 +71,32 @@ const SystemLogsSection: React.FC = () => {
         return <FileText size={14} className="text-on-surface-variant/50" />;
     };
 
-    const formatTime = (log: SystemLog) => parseTimestamp(log)?.toLocaleTimeString([], {
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-    }) || 'Unknown time';
+    const formatTime = (log: SystemLog) => parseTimestamp(log)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) || 'Unknown time';
 
     if (loading) return <div className="h-48 flex items-center justify-center"><Loader size={20} /></div>;
 
     const dates = Object.keys(groupedLogs);
     return (
         <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-outline rounded-xl bg-surface p-4">
-                <div>
-                    <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase">Activity history</h3>
-                    <p className="mt-1 text-[11px] text-on-surface-variant/60">
-                        {logs.length} latest events · server timestamps shown in your local time
-                        {lastUpdated && ` · refreshed ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`}
-                    </p>
-                </div>
-                <button type="button" onClick={() => void loadLogs(true)} disabled={refreshing}
-                    className="h-9 px-3 inline-flex items-center justify-center gap-2 rounded-lg border border-outline text-[11px] font-bold uppercase tracking-wide text-on-surface hover:bg-surface-container disabled:opacity-50">
-                    <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
-                    {refreshing ? 'Refreshing' : 'Refresh'}
-                </button>
+            <div className="border border-outline rounded-xl bg-surface p-4">
+                <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase">Activity history</h3>
+                <p className="mt-1 text-[11px] text-on-surface-variant/60">Verified account actions, newest first. Times use your device timezone.</p>
             </div>
-
             {error && <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-[11px] font-medium text-red-500">{error}</div>}
-
             {dates.length === 0 ? (
                 <div className="border border-outline rounded-xl bg-surface p-12 flex flex-col items-center justify-center text-center">
                     <Clock size={28} className="text-on-surface-variant/20 mb-3" />
                     <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase mb-1">No activity yet</h3>
                     <p className="text-[11px] text-on-surface-variant/50 max-w-xs">Verified account actions will appear here with their exact time and unique event ID.</p>
                 </div>
-            ) : dates.map((date) => (
+            ) : dates.map(date => (
                 <div key={date} className="border border-outline rounded-xl overflow-hidden bg-surface">
                     <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-outline bg-surface-container/50">
                         <Clock size={14} className="text-on-surface-variant/50" />
                         <span className="text-xs font-semibold text-on-surface">{date}</span>
                     </div>
                     <div className="divide-y divide-outline/30">
-                        {groupedLogs[date].map((log) => (
+                        {groupedLogs[date].map(log => (
                             <div key={log.id} className="flex gap-3 sm:gap-4 p-4 sm:p-5 hover:bg-surface-container/10 transition-colors">
                                 <div className="w-9 h-9 rounded-lg bg-surface-container border border-outline/65 flex items-center justify-center shrink-0">{getLogIcon(log.action)}</div>
                                 <div className="flex-1 min-w-0">
@@ -111,6 +112,12 @@ const SystemLogsSection: React.FC = () => {
                     </div>
                 </div>
             ))}
+            {hasMore && (
+                <button type="button" onClick={() => void loadMore()} disabled={loadingMore}
+                    className="w-full h-11 rounded-xl border border-outline bg-surface text-[11px] font-bold uppercase tracking-wide text-on-surface hover:bg-surface-container disabled:opacity-50">
+                    {loadingMore ? 'Loading…' : 'Load more activity'}
+                </button>
+            )}
         </div>
     );
 };

@@ -536,8 +536,10 @@ export const attendanceService = {
     },
 
     // System logs
-    getSystemLogs: async (limit = 100): Promise<SystemLog[]> => {
-        const response = await api.get(`/api/profile/logs?limit=${limit}`);
+    getSystemLogs: async (limit = 7, offset = 0, snapshot?: string): Promise<{ items: SystemLog[]; has_more: boolean; next_offset: number; snapshot: string }> => {
+        const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+        if (snapshot) params.set('snapshot', snapshot);
+        const response = await api.get(`/api/profile/logs?${params.toString()}`);
         return response.data.data;
     },
 

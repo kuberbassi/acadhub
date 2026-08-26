@@ -6,6 +6,7 @@ import { requireAuth, type AuthRequest } from '../middleware/auth.js'
 import { ok, fail } from '../utils/response.js'
 import { AttendanceCalculator } from '../lib/calculations.js'
 import { callLLM, ChatMessage } from '../utils/llm.js'
+import { normalizeLegacyPrismaInstant } from '../utils/timestamps.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -276,7 +277,7 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
     if (systemLogs.length) {
         lines.push('## Recent Activity Logs (Last 20, newest first)')
         for (const log of systemLogs) {
-            lines.push(`  - Event ${log.id} | ${log.timestamp.toISOString()} (UTC) | ${log.action}: ${log.description}`)
+            lines.push(`  - Event ${log.id} | ${normalizeLegacyPrismaInstant(log.id, log.timestamp).toISOString()} (UTC) | ${log.action}: ${log.description}`)
         }
         lines.push('')
     }
