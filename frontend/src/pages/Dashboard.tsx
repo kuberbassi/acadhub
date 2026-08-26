@@ -405,7 +405,7 @@ const Dashboard: React.FC = () => {
             ) : (
                 <div className="space-y-6">
                     {/* Bento Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-3">
                         
                         {/* Bento Card 1: Academic Health */}
                         <div className="rounded-xl border border-outline/50 bg-surface p-5 sm:p-6 flex flex-col justify-between hover:border-on-surface/20 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.01)]">

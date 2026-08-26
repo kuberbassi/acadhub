@@ -287,4 +287,6 @@ Calendar day cells display up to six compact log indicators in stored log order.
 
 The floating radial navigation displays one centred page-name label above the expanded fan. It defaults to the current route and updates as the pointer focuses another bubble; individual bubbles remain icon-only to keep the compact layout uncluttered.
 
+Dashboard summary cards use natural content height on the desktop grid. A long daily timetable can therefore expand independently without stretching the attendance-health and academic-target cards into large empty panels.
+
 Frontend attendance and course date defaults use `formatLocalDate` (`YYYY-MM-DD` from local calendar components) rather than slicing a UTC ISO timestamp. This prevents late-night or early-morning actions from being assigned to an adjacent date because of timezone conversion.
