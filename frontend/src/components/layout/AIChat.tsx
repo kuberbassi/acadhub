@@ -223,7 +223,7 @@ const AIChat: React.FC = () => {
                                     </div>
                                     <div className="text-center space-y-1">
                                         <p className="text-on-surface text-sm font-bold tracking-tight">How can I help you today?</p>
-                                        <p className="text-on-surface-variant/40 text-[10px] max-w-[240px] leading-normal font-medium">Ask about your attendance conduct, class slots, or semester grades.</p>
+                                        <p className="text-on-surface-variant/40 text-[10px] max-w-[240px] leading-normal font-medium">Ask about attendance, pending class blocks, tracker submissions, schedules, or recent activity.</p>
                                     </div>
                                 </div>
                             )}

@@ -4,7 +4,7 @@ import { prisma } from '../config/prisma.js'
 import { ENV } from '../config/env.js'
 import { requireAuth, type AuthRequest } from '../middleware/auth.js'
 import { ok, fail } from '../utils/response.js'
-import { GradeCalculator, AttendanceCalculator } from '../lib/calculations.js'
+import { AttendanceCalculator } from '../lib/calculations.js'
 import { callLLM, ChatMessage } from '../utils/llm.js'
 
 const router = Router()
@@ -42,31 +42,28 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
         ],
     }
 
-    const [subjects, recentLogs, medicalLeaveCount, allTimetables, courses, prefs, backups, systemLogs] = await Promise.all([
+    const [subjects, recentLogs, todayAttendanceLogs, medicalLeaveCount, allTimetables, courses, prefs, backups, systemLogs] = await Promise.all([
         prisma.subject.findMany({ where: { user_id: userId, semester: activeSem } }),
-        prisma.attendanceLog.findMany({ where: { user_id: userId, ...attendanceSemesterFilter }, orderBy: [{ date: 'desc' }, { timestamp: 'desc' }], take: 20 }),
+        prisma.attendanceLog.findMany({ where: { user_id: userId, ...attendanceSemesterFilter }, orderBy: [{ date: 'desc' }, { timestamp: 'desc' }], take: 30 }),
+        prisma.attendanceLog.findMany({ where: { user_id: userId, date: today, ...attendanceSemesterFilter }, orderBy: { timestamp: 'asc' } }),
         prisma.attendanceLog.count({ where: { user_id: userId, ...attendanceSemesterFilter, status: { in: ['medical', 'approved_medical'] } } }),
         prisma.timetable.findMany({ where: { user_id: userId } }),
         prisma.manualCourse.findMany({ where: { user_id: userId } }),
         prisma.userPreference.findUnique({ where: { user_id: userId } }),
         prisma.userBackup.findMany({ where: { user_id: userId }, orderBy: { created_at: 'desc' } }),
-        prisma.systemLog.findMany({ where: { user_id: userId }, orderBy: { timestamp: 'desc' }, take: 10 })
+        prisma.systemLog.findMany({ where: { user_id: userId }, orderBy: { timestamp: 'desc' }, take: 20 })
     ])
 
-    let resolvedTimetable = allTimetables.find(t => t.semester === activeSem)
-    
-    if (!resolvedTimetable && allTimetables.length > 0) {
-        let best = allTimetables[0]
-        let bestScore = 0
-        for (const t of allTimetables) {
-            const sch = (t.schedule as any) || {}
-            const count = Object.values(sch).flat().length
-            if (count > bestScore) { best = t; bestScore = count }
-        }
-        if (bestScore > 0) resolvedTimetable = best
-    }
+    const resolvedTimetable = allTimetables.find(t => t.semester === activeSem)
 
     const lines: string[] = []
+    lines.push('## Context Metadata')
+    lines.push(`Generated At: ${new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'long' }).format(now)}`)
+    lines.push('Authoritative Timezone For Today: Asia/Kolkata (IST)')
+    lines.push(`Authoritative Today: ${today} (${todayStr})`)
+    lines.push(`Selected Semester Scope: ${activeSem}`)
+    lines.push('Assistant Access: Read-only database context; cannot perform attendance or settings mutations.')
+    lines.push('')
 
     if (user) {
         lines.push('## User Profile')
@@ -101,12 +98,14 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
 
     if (subjects.length) {
         lines.push('## Subjects, Attendance & Trackers')
-        let totalMarks = 0
-        let totalMaxMarks = 0
         let totalPracticals = 0
         let completedPracticals = 0
+        let submittedPracticalSubjects = 0
+        let practicalSubjectCount = 0
         let totalAssignments = 0
         let completedAssignments = 0
+        let submittedAssignmentSubjects = 0
+        let assignmentSubjectCount = 0
 
         for (const sub of subjects) {
             const attended = sub.attended ?? 0
@@ -123,15 +122,19 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
             let trackerInfo = ''
             if (isPractical) {
                 const p = (sub.practicals as any) || { total: 10, completed: 0, hardcopy: false }
-                trackerInfo += ` | Practicals: ${p.completed}/${p.total} (${p.hardcopy ? 'Submitted' : 'Not fully submitted'})`
+                trackerInfo += ` | Practicals: ${p.completed}/${p.total} | Practical submission: ${p.hardcopy ? 'Submitted' : 'Unsubmitted'}`
                 totalPracticals += Number(p.total ?? 0)
                 completedPracticals += Number(p.completed ?? 0)
+                practicalSubjectCount += 1
+                if (p.hardcopy) submittedPracticalSubjects += 1
             }
             if (isAssignment) {
                 const a = (sub.assignments as any) || { total: 4, completed: 0, hardcopy: false }
-                trackerInfo += ` | Assignments: ${a.completed}/${a.total} (${a.hardcopy ? 'Submitted' : 'Not fully submitted'})`
+                trackerInfo += ` | Assignments: ${a.completed}/${a.total} | Assignment submission: ${a.hardcopy ? 'Submitted' : 'Unsubmitted'}`
                 totalAssignments += Number(a.total ?? 0)
                 completedAssignments += Number(a.completed ?? 0)
+                assignmentSubjectCount += 1
+                if (a.hardcopy) submittedAssignmentSubjects += 1
             }
 
             lines.push(`  - ${sub.name} (Code: ${sub.code || 'N/A'}, Semester: ${sub.semester} - Selected): Current: ${pct}% (${attended}/${total}) | Target: ${target}% | Bunk Status: ${bg.status_message}${trackerInfo}`)
@@ -150,12 +153,14 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
         lines.push(`Overall Attendance Status: ${summary.risk_level}`)
         lines.push(`Safe Bunks Remaining (Overall): ${summary.safe_bunks_remaining}`)
         lines.push(`Total Practical Items Tracked: ${completedPracticals}/${totalPracticals} Completed`)
+        lines.push(`Practical Subject Submissions: ${submittedPracticalSubjects}/${practicalSubjectCount} Submitted`)
         lines.push(`Total Assignment Items Tracked: ${completedAssignments}/${totalAssignments} Completed`)
+        lines.push(`Assignment Subject Submissions: ${submittedAssignmentSubjects}/${assignmentSubjectCount} Submitted`)
         lines.push('')
     }
 
     if (recentLogs.length) {
-        lines.push('## Recent Attendance Logs (Last 20 entries)')
+        lines.push('## Recent Attendance Logs (Last 30 entries)')
         for (const log of recentLogs) {
             lines.push(`  - ${log.date} | ${log.subject_name}: ${log.status} (${log.type})${log.notes ? ` - Note: ${log.notes}` : ''}`)
         }
@@ -166,10 +171,10 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
     lines.push(`Total Backups Done: ${backups.length}`)
     if (backups.length > 0) {
         const latest = backups[0]
-        lines.push(`Latest Backup Date & Time: ${new Date(latest.created_at).toLocaleString('en-GB')}`)
+        lines.push(`Latest Backup Date & Time: ${new Date(latest.created_at).toLocaleString('en-GB', { timeZone: 'Asia/Kolkata', timeZoneName: 'short' })}`)
         for (let i = 0; i < backups.length; i++) {
             const b = backups[i]
-            lines.push(`  - Backup #${i + 1}: Timestamp: ${new Date(b.created_at).toLocaleString('en-GB')} | Type: ${b.backup_type} | Expires: ${new Date(b.expires_at).toLocaleDateString('en-GB')}`)
+            lines.push(`  - Backup #${i + 1}: Timestamp: ${new Date(b.created_at).toLocaleString('en-GB', { timeZone: 'Asia/Kolkata', timeZoneName: 'short' })} | Type: ${b.backup_type} | Expires: ${new Date(b.expires_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata' })}`)
         }
     } else {
         lines.push('No cloud backups completed yet.')
@@ -197,7 +202,6 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
 
         const todaySlots = schedule[todayStr]
         if (todaySlots?.length) {
-            const todayLogs = recentLogs.filter((l: any) => l.date === today)
             const matchedLogIds = new Set<string>()
             let previousClass: any = null
             let blockStart = ''
@@ -223,12 +227,12 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
                 blockStart = String(slot.start_time || slot.startTime || slot.time || '')
                 previousClass = slot
                 const blockType = `${slotType}::${blockStart}`
-                const exact = todayLogs.find((log: any) =>
+                const exact = todayAttendanceLogs.find((log: any) =>
                     !matchedLogIds.has(String(log.id))
                     && String(log.subject_id) === subId
                     && String(log.type) === blockType
                 )
-                const legacy = exact || todayLogs.find((log: any) =>
+                const legacy = exact || todayAttendanceLogs.find((log: any) =>
                     !matchedLogIds.has(String(log.id))
                     && String(log.subject_id) === subId
                     && String(log.type) === slotType
@@ -246,7 +250,16 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
                 }
                 lines.push('')
             }
+
+            lines.push('## Today Attendance Operation State')
+            lines.push(`Existing Marked Records Today: ${todayAttendanceLogs.length}`)
+            lines.push(`Bulk Mark Eligibility: ${todayAttendanceLogs.length === 0 ? 'ALLOWED - date is empty' : 'BLOCKED - use Unmark all first because at least one record exists'}`)
+            lines.push(`Pending Scheduled Attendance Blocks: ${pending.length}`)
+            lines.push('Bulk marking can only use Present, Absent, Medical Leave, or Cancelled. Substitution must be marked individually.')
+            lines.push('')
         }
+    } else {
+        lines.push(`## Weekly Timetable\nNo timetable is stored for selected Semester ${activeSem}. Do not use another semester's timetable as a fallback.\n`)
     }
 
     if (courses.length) {
@@ -261,9 +274,9 @@ async function buildFullContext(req: AuthRequest, selectedSemester?: number): Pr
 
 
     if (systemLogs.length) {
-        lines.push('## Recent Activity Logs')
+        lines.push('## Recent Activity Logs (Last 20, newest first)')
         for (const log of systemLogs) {
-            lines.push(`  - ${log.timestamp.toISOString().slice(0, 16).replace('T', ' ')} | ${log.action}: ${log.description}`)
+            lines.push(`  - Event ${log.id} | ${log.timestamp.toISOString()} (UTC) | ${log.action}: ${log.description}`)
         }
         lines.push('')
     }
@@ -277,29 +290,31 @@ You have direct, real-time access to the student's unified database. Your missio
 
 ## Operational Directives
 1. TRUTHFULNESS: Use ONLY the provided context. If context is missing, report it.
-2. FULL WEEK AWARENESS: You have access to the "COMPLETE WEEKLY ACADEMIC SCHEDULE". When asked about ANY day, browse that specific day's schedule and report the slots precisely.
-3. BUNK ESTIMATIONS & DEFICIT RISK: For any attendance queries, calculate exactly:
-   - Which subjects are currently under the 75% target threshold (list them in a **DEFICIT WARNING** section).
+2. FULL WEEK AWARENESS: If "COMPLETE WEEKLY ACADEMIC SCHEDULE" exists in context, use the requested day's exact slots. If it is absent, say that no timetable is stored for the selected semester.
+3. BUNK ESTIMATIONS & DEFICIT RISK: For attendance queries, use each subject's provided target and calculated Bunk Status exactly:
+   - List subjects below their own configured target in a **DEFICIT WARNING** section.
    - Exactly how many classes they need to attend consecutively to restore safety, or how many they are safe to skip (bunk).
 4. STUDY STRATEGY & TACTICS: If a student asks about performance or optimization:
-   - Identify their weakest results or low-progress skills/online courses.
+   - Identify low-attendance subjects, incomplete trackers, or low-progress online courses that are actually present in context.
    - Suggest a concrete 3-step study or attendance strategy to optimize their semester.
-5. METRIC UNIFICATION: Use CGPA (Weighted), Official Overall Attendance, Attendance With Medical Leaves Counted As Absent, and Academic Strength as definitive metrics. Clearly label which attendance percentage you quote and never treat the medical-as-absent scenario as the official percentage.
-6. TODAY'S PENDING ACTION: Remind the student of any pending attendance logs that need to be marked today.
+5. METRIC UNIFICATION: Use Official Overall Attendance and Attendance With Medical Leaves Counted As Absent as separate definitive metrics. Clearly label which percentage you quote and never treat the medical-as-absent scenario as official attendance. Do not claim CGPA, SGPA, marks, grades, or academic-strength data unless those exact values appear in context.
+6. TODAY'S PENDING ACTION: When asked about today, attendance status, or planning, report the supplied pending attendance blocks. Do not call an already-marked block pending.
 7. SEMESTER CURATION: The context specifies the active selected semester (UI State). Unless the user explicitly specifies a particular semester in their prompt, you MUST default your answers and stats analysis to the currently active selected semester.
-8. PROFILE & SESSION AWARENESS: You have direct access to the student's complete profile (default target attendance) and detailed system activity logs. Utilize these metrics when asked about user status, profile settings, or activity history.
+8. TRACKER & ACTIVITY PRECISION: Practical/assignment item progress and submission state are independent. "Unsubmitted" does not mean incomplete. For activity questions, quote the event ID, action, and UTC timestamp supplied in context; never infer an action from attendance-log creation time.
+9. ATTENDANCE MUTATION RULES: You are read-only. Explain how to use the UI but never claim you marked, edited, submitted, unmarked, or changed anything. Bulk mark is allowed only when the context says the selected date is empty; otherwise instruct the user to use Unmark all first. Substitution is never a bulk option.
+10. TIME & DATE: Treat Context Metadata's Asia/Kolkata date as authoritative for "today". Activity timestamps are explicitly UTC; state the timezone whenever quoting them and do not shift dates mentally.
 
 ## Strict Anti-Hallucination & Verification Guidelines (Targeting 99.9% Accuracy)
 - NEVER make up, invent, or extrapolate facts, grades, dates, backup statuses, or logs.
 - If the user asks about a subject or a value that is NOT in the CURRENT ACADEMIC CONTEXT, state clearly: "This information is not present in your profile database." Do NOT assume or guess.
-- Use the calculations provided in the context (like Bunk Status, CGPA, SGPA, and Academic Strength) as the single source of truth. DO NOT perform custom mental math that contradicts the provided status messages.
+- Use provided calculations such as Bunk Status and attendance KPIs as the single source of truth. Do not recompute or contradict them.
 - Always quote the exact numbers and text from the context.
-- Ground every answer with a reference to the context category (e.g., "According to your detailed results", "According to your weekly timetable").
+- Ground every answer in the relevant context category without pretending unavailable categories exist.
 
 ## Design, Tone and Length
 - Persona: High-impact Academic Strategist. Tactical, professional, and extremely direct.
 - Formatting: Give ultra-concise, short, crisp answers. Avoid wordy explanations, meta-commentary, or verbose transitions.
-- Maximum Length: Keep responses under 150 words. Use 2-3 short, clean bullet points.
+- Maximum Length: Usually stay under 150 words with 2-3 clean bullets; exceed this only when the user explicitly requests an exhaustive schedule or report.
 - Bolding: Use **bolding** for all metrics and numbers.`
 
 async function chatHandler(req: AuthRequest, res: any) {

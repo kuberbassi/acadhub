@@ -234,7 +234,9 @@ The destination account submits this token. The backend verifies the signature, 
 ### 3.3 🤖 LLM Failover In Semester Assistant
 The AI Semester Assistant uses a Groq LLM (`llama-3.3-70b-versatile`) to generate query completions. In the event of rate limit errors or API timeouts, it falls back to a Google Gemini API (`gemini-2.5-flash`) stream.
 
-The context builder is scoped to the semester selected in the UI (or the user's current semester when none is supplied). Attendance logs, subject totals, medical-leave counts, timetable selection, and pending-class checks use that same semester. Pending attendance uses the block-aware identity described below, and all “today” calculations use the `Asia/Kolkata` calendar day. The assistant receives official attendance and the medical-as-absent scenario as separately labelled metrics and is instructed never to present the latter as official attendance.
+The context builder is scoped to the semester selected in the UI (or the user's current semester when none is supplied). Attendance logs, subject totals, medical-leave counts, timetable selection, and pending-class checks use that same semester; it never falls back to another semester's timetable. Today's logs are queried independently rather than inferred from a limited recent-log list. Pending attendance uses the block-aware identity described below, and all “today” calculations use an explicitly supplied `Asia/Kolkata` date.
+
+The assistant receives official attendance and the medical-as-absent scenario as separately labelled metrics, exact practical/assignment progress and submission state, today's bulk-mark eligibility, and recent activity IDs with UTC timestamps. Its prompt is read-only: it may explain UI actions but cannot claim to mutate data. It must not claim grades, SGPA, CGPA, or academic-strength data unless exact values are present in context.
 
 ### 3.4 Timetable Attendance Blocks
 
